@@ -1,16 +1,9 @@
 import axios from 'axios'
 
-// Configure API base URL based on environment
+// Configure API base URL
 const getBaseURL = () => {
-  // In development, use the proxy (Vite handles /api -> localhost:3001)
-  if (import.meta.env.DEV) {
-    return '/api'
-  }
-  
-  // In production, use the deployed backend URL from environment variable
-  const backendURL = process.env.VITE_BACKEND_URL || 'https://talk-to-your-db.onrender.com'
-  console.log('Using backend URL:', backendURL) // Debug log
-  return `${backendURL}/api`
+  // Always use the production backend URL
+  return 'https://talk-to-your-db.onrender.com/api'
 }
 
 // Configure axios defaults
