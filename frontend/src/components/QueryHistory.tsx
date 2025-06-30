@@ -340,7 +340,7 @@ export const QueryHistory: React.FC<Props> = ({ onQuerySelect, onSqlSelect }) =>
 
           <Box>
             <Typography variant="subtitle2" gutterBottom>Top Providers</Typography>
-            {analytics.topProviders.map((provider: any, index: number) => (
+            {analytics.topProviders.map((provider: any, _index: number) => (
               <Box key={provider.provider} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography variant="body2">{provider.provider}</Typography>
                 <Badge badgeContent={provider.count} color="primary">
