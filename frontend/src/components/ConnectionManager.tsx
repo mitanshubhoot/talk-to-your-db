@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Database, TestTube, Trash2, CheckCircle, Loader } from 'lucide-react';
+import api from '../services/api';
 
 interface DatabaseConnection {
   id: string;
@@ -85,10 +86,9 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
   const loadConnections = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/connections');
-      const data = await response.json();
-      if (data.success) {
-        setConnections(data.data);
+      const response = await api.get('/connections');
+      if (response.data.success) {
+        setConnections(response.data.data);
       }
     } catch (error) {
       console.error('Failed to load connections:', error);
@@ -103,32 +103,20 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
     
     try {
       // Test connection first
-      const testResponse = await fetch('/api/connections/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      
-      const testData = await testResponse.json();
-      if (!testData.success) {
-        alert(`Connection test failed: ${testData.error.message}`);
+      const testResponse = await api.post('/connections/test', formData);
+      if (!testResponse.data.success) {
+        alert(`Connection test failed: ${testResponse.data.error.message}`);
         return;
       }
 
       // Create connection if test passes
-      const response = await fetch('/api/connections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setConnections([...connections, data.data]);
+      const response = await api.post('/connections', formData);
+      if (response.data.success) {
+        setConnections([...connections, response.data.data]);
         setShowForm(false);
         resetForm();
       } else {
-        alert(`Failed to create connection: ${data.error.message}`);
+        alert(`Failed to create connection: ${response.data.error.message}`);
       }
     } catch (error) {
       console.error('Failed to create connection:', error);
@@ -141,17 +129,11 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
   const testConnection = async (connection: DatabaseConnection) => {
     setTestingConnection(connection.id);
     try {
-      const response = await fetch('/api/connections/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(connection)
-      });
-      
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.post('/connections/test', connection);
+      if (response.data.success) {
         alert('Connection test successful!');
       } else {
-        alert(`Connection test failed: ${data.error.message}`);
+        alert(`Connection test failed: ${response.data.error.message}`);
       }
     } catch (error) {
       console.error('Connection test failed:', error);
@@ -165,15 +147,11 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({
     if (!confirm('Are you sure you want to delete this connection?')) return;
     
     try {
-      const response = await fetch(`/api/connections/${id}`, {
-        method: 'DELETE'
-      });
-      
-      const data = await response.json();
-      if (data.success) {
+      const response = await api.delete(`/connections/${id}`);
+      if (response.data.success) {
         setConnections(connections.filter(c => c.id !== id));
       } else {
-        alert(`Failed to delete connection: ${data.error.message}`);
+        alert(`Failed to delete connection: ${response.data.error.message}`);
       }
     } catch (error) {
       console.error('Failed to delete connection:', error);
