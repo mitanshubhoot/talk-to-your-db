@@ -1,8 +1,21 @@
 import axios from 'axios'
 
+// Configure API base URL based on environment
+const getBaseURL = () => {
+  // In development, use the proxy (Vite handles /api -> localhost:3001)
+  if (import.meta.env.DEV) {
+    return '/api'
+  }
+  
+  // In production, use the deployed backend URL
+  // Replace this with your actual Render backend URL
+  const backendURL = import.meta.env.VITE_BACKEND_URL || 'https://your-backend-service.onrender.com'
+  return `${backendURL}/api`
+}
+
 // Configure axios defaults
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getBaseURL(),
   timeout: 30000, // 30 second timeout
   headers: {
     'Content-Type': 'application/json',

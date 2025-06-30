@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: talk-to-your-db-frontend
+    env: static
+    buildCommand: |
+      cd frontend &&
+      npm install &&
+      npm run build
+    staticPublishPath: frontend/dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: NODE_ENV
+        value: production 
