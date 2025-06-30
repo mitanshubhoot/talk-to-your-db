@@ -45,6 +45,7 @@ import {
   Info,
 } from '@mui/icons-material'
 import { textToSqlApi } from './services/api'
+import api from './services/api'
 import { QueryHistory } from './components/QueryHistory'
 import { PerformanceDashboard } from './components/PerformanceDashboard'
 import { DatabaseSelector } from './components/DatabaseSelector'
@@ -127,13 +128,10 @@ function App() {
   const loadCurrentDatabase = async () => {
     try {
       // Try to load current database info
-      const response = await fetch('/api/connections/current')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success && data.data) {
-          setCurrentDatabase(data.data)
-          return
-        }
+      const response = await api.get('/connections/current')
+      if (response.data.success && response.data.data) {
+        setCurrentDatabase(response.data.data)
+        return
       }
     } catch (error) {
       console.log('No current database connection found')
@@ -173,17 +171,11 @@ function App() {
     setResult(null)
 
     try {
-      const response = await fetch('/api/text-to-sql/generate-and-execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: userQuery })
-      })
-
-      const data = await response.json()
-      if (data.success) {
-        setResult(data.data)
+      const response = await api.post('/text-to-sql/generate-and-execute', { query: userQuery })
+      if (response.data.success) {
+        setResult(response.data.data)
       } else {
-        setError(data.error?.message || 'Failed to generate SQL')
+        setError(response.data.error?.message || 'Failed to generate SQL')
       }
     } catch (err) {
       setError('Failed to generate SQL. Please check your connection.')
@@ -200,19 +192,14 @@ function App() {
 
     try {
       // Get optimization suggestions
-      const response = await fetch('/api/performance/suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sql: result.sql,
-          executionTime: 1000, // Default execution time for analysis
-          connectionId: currentDatabase.id
-        })
+      const response = await api.post('/performance/suggestions', {
+        sql: result.sql,
+        executionTime: 1000, // Default execution time for analysis
+        connectionId: currentDatabase.id
       })
 
-      const data = await response.json()
-      if (data.success) {
-        const suggestions = data.data
+      if (response.data.success) {
+        const suggestions = response.data.data
         
         // Create optimization result with summary
         const optimizationData: OptimizationResult = {
@@ -231,7 +218,7 @@ function App() {
         setOptimizationResult(optimizationData)
         setShowOptimizationModal(true)
       } else {
-        setError(data.error?.message || 'Failed to optimize SQL')
+        setError(response.data.error?.message || 'Failed to optimize SQL')
       }
     } catch (err) {
       setError('Failed to optimize SQL. Please check your connection.')
