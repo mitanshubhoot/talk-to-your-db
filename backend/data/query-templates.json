@@ -1,0 +1,63 @@
+[
+  {
+    "id": "customers-all",
+    "name": "View All Customers",
+    "description": "Display all customer information",
+    "category": "Customer Management",
+    "query": "show me all customers",
+    "expectedTables": [
+      "customers"
+    ],
+    "difficulty": "beginner"
+  },
+  {
+    "id": "sales-summary",
+    "name": "Sales Summary",
+    "description": "Get total sales and revenue",
+    "category": "Sales Analytics",
+    "query": "show me total sales revenue",
+    "expectedTables": [
+      "orders",
+      "order_items",
+      "products"
+    ],
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "top-customers",
+    "name": "Top Customers by Revenue",
+    "description": "Find customers who have spent the most",
+    "category": "Customer Analytics",
+    "query": "show me top 10 customers by total spending",
+    "expectedTables": [
+      "customers",
+      "orders",
+      "order_items"
+    ],
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "product-performance",
+    "name": "Product Performance",
+    "description": "Analyze product sales performance",
+    "category": "Product Analytics",
+    "query": "show me products with highest sales volume",
+    "expectedTables": [
+      "products",
+      "order_items"
+    ],
+    "difficulty": "intermediate"
+  },
+  {
+    "id": "monthly-trends",
+    "name": "Monthly Sales Trends",
+    "description": "View sales trends by month",
+    "category": "Sales Analytics",
+    "query": "show me sales by month for this year",
+    "expectedTables": [
+      "orders",
+      "order_items"
+    ],
+    "difficulty": "advanced"
+  }
+]

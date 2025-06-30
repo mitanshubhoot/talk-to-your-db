@@ -1,0 +1,24 @@
+
+> talk-to-your-db-frontend@1.0.0 build
+> tsc && vite build
+
+src/App.tsx(30,3): error TS6133: 'Container' is declared but its value is never read.
+src/App.tsx(41,3): error TS6133: 'Speed' is declared but its value is never read.
+src/App.tsx(51,1): error TS6133: 'ConnectionManager' is declared but its value is never read.
+src/App.tsx(111,10): error TS6133: 'connectionStatus' is declared but its value is never read.
+src/App.tsx(275,9): error TS6133: 'handleDatabaseDisconnect' is declared but its value is never read.
+src/components/ConnectionManager.tsx(2,47): error TS6133: 'Settings' is declared but its value is never read.
+src/components/ConnectionManager.tsx(2,70): error TS6133: 'XCircle' is declared but its value is never read.
+src/components/PerformanceDashboard.tsx(4,39): error TS6133: 'AlertCircle' is declared but its value is never read.
+src/components/PerformanceDashboard.tsx(306,66): error TS6133: 'index' is declared but its value is never read.
+src/components/QueryHistory.tsx(8,3): error TS6133: 'ListItemSecondaryAction' is declared but its value is never read.
+src/components/QueryHistory.tsx(14,3): error TS6133: 'Button' is declared but its value is never read.
+src/components/QueryHistory.tsx(15,3): error TS6133: 'Dialog' is declared but its value is never read.
+src/components/QueryHistory.tsx(16,3): error TS6133: 'DialogTitle' is declared but its value is never read.
+src/components/QueryHistory.tsx(17,3): error TS6133: 'DialogContent' is declared but its value is never read.
+src/components/QueryHistory.tsx(18,3): error TS6133: 'DialogActions' is declared but its value is never read.
+src/components/QueryHistory.tsx(19,3): error TS6133: 'Divider' is declared but its value is never read.
+src/components/QueryHistory.tsx(65,10): error TS6133: 'selectedItem' is declared but its value is never read.
+src/components/QueryHistory.tsx(65,24): error TS6133: 'setSelectedItem' is declared but its value is never read.
+src/components/QueryHistory.tsx(111,28): error TS6133: 'event' is declared but its value is never read.
+src/components/QueryHistory.tsx(351,57): error TS6133: 'index' is declared but its value is never read.

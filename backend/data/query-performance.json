@@ -1,0 +1,69 @@
+[
+  {
+    "queryId": "query_1751172193704_ps0dc0wqr",
+    "sql": "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)",
+    "executionTime": 6,
+    "rowsReturned": 0,
+    "connectionId": "conn_1751172130399_m9wtb6by7",
+    "timestamp": "2025-06-29T04:43:13.705Z",
+    "optimizationSuggestions": [],
+    "explainPlan": {
+      "plan": [],
+      "totalCost": 0,
+      "estimatedRows": 0,
+      "planType": "SQLite Query Plan"
+    }
+  },
+  {
+    "queryId": "query_1751172200353_14htc0zes",
+    "sql": "INSERT INTO users (name, email) VALUES (\"John Doe\", \"john@example.com\"), (\"Jane Smith\", \"jane@example.com\"), (\"Bob Johnson\", \"bob@example.com\")",
+    "executionTime": 1,
+    "rowsReturned": 0,
+    "connectionId": "conn_1751172130399_m9wtb6by7",
+    "timestamp": "2025-06-29T04:43:20.353Z",
+    "optimizationSuggestions": [],
+    "explainPlan": {
+      "plan": [
+        {
+          "id": 2,
+          "parent": 0,
+          "notused": 0,
+          "detail": "SCAN 3 CONSTANT ROWS"
+        }
+      ],
+      "totalCost": 0,
+      "estimatedRows": 0,
+      "planType": "SQLite Query Plan"
+    }
+  },
+  {
+    "queryId": "query_1751172202039_t0rd1ysxf",
+    "sql": "SELECT * FROM users WHERE name LIKE \"J%\"",
+    "executionTime": 1,
+    "rowsReturned": 2,
+    "connectionId": "conn_1751172130399_m9wtb6by7",
+    "timestamp": "2025-06-29T04:43:22.039Z",
+    "optimizationSuggestions": [
+      {
+        "type": "rewrite",
+        "severity": "medium",
+        "message": "Avoid SELECT * - specify only needed columns for better performance.",
+        "suggestedSql": "SELECT column1, column2, ... FROM users WHERE name LIKE \"J%\"",
+        "impact": "Reduces data transfer and memory usage"
+      }
+    ],
+    "explainPlan": {
+      "plan": [
+        {
+          "id": 2,
+          "parent": 0,
+          "notused": 0,
+          "detail": "SCAN users"
+        }
+      ],
+      "totalCost": 0,
+      "estimatedRows": 0,
+      "planType": "SQLite Query Plan"
+    }
+  }
+]

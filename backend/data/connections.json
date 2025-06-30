@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Test SQLite DB",
+    "type": "sqlite",
+    "database": "test",
+    "filepath": "./test.db",
+    "isDefault": false,
+    "id": "conn_1751172130399_m9wtb6by7",
+    "createdAt": "2025-06-29T04:42:10.399Z",
+    "updatedAt": "2025-06-29T04:42:10.399Z"
+  }
+]
