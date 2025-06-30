@@ -4,10 +4,12 @@ services:
     env: static
     buildCommand: |
       cd frontend &&
-      npm install &&
-      npm run build
+      npm ci &&
+      NODE_ENV=production npm run build
     staticPublishPath: frontend/dist
     pullRequestPreviewsEnabled: false
     envVars:
       - key: NODE_ENV
-        value: production 
+        value: production
+      - key: VITE_BACKEND_URL
+        value: https://talk-to-your-db.onrender.com 
