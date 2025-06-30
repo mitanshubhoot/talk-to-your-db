@@ -27,7 +27,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Container,
 } from '@mui/material'
 import {
   AutoAwesome,
@@ -38,7 +37,6 @@ import {
   ExpandMore,
   History,
   Storage,
-  Speed,
   Settings as SettingsIcon,
   AddRounded,
   CheckCircle,
@@ -47,9 +45,7 @@ import {
   Info,
 } from '@mui/icons-material'
 import { textToSqlApi } from './services/api'
-import { historyApi } from './services/historyApi'
 import { QueryHistory } from './components/QueryHistory'
-import { ConnectionManager } from './components/ConnectionManager'
 import { PerformanceDashboard } from './components/PerformanceDashboard'
 import { DatabaseSelector } from './components/DatabaseSelector'
 import { ResultsTable } from './components/ResultsTable'
@@ -109,7 +105,6 @@ function App() {
   const [currentView, setCurrentView] = useState<ViewType>('main')
   const [userQuery, setUserQuery] = useState('')
   const [expandedNav, setExpandedNav] = useState<string[]>(['assistant', 'configuration'])
-  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown')
   const [currentDatabase, setCurrentDatabase] = useState<DatabaseConnection | null>(null)
   const [profileName, setProfileName] = useState('')
   const [profileEmail, setProfileEmail] = useState('')
@@ -135,10 +130,8 @@ function App() {
     try {
       const response = await textToSqlApi.testConnection()
       const isConnected = response.data.connected
-      setConnectionStatus(isConnected ? 'connected' : 'disconnected')
       return isConnected
     } catch (error) {
-      setConnectionStatus('disconnected')
       return false
     }
   }
@@ -151,7 +144,6 @@ function App() {
         const data = await response.json()
         if (data.success && data.data) {
           setCurrentDatabase(data.data)
-          setConnectionStatus('connected')
           return
         }
       }
@@ -272,8 +264,6 @@ function App() {
     if (confidence >= 70) return 'warning'
     return 'error'
   }
-
-
 
   const handleNewChat = () => {
     setUserQuery('')
@@ -791,21 +781,20 @@ function App() {
              case 'databases':
          return (
            <DatabaseSelector
-             onConnectionCreated={(connectionId) => {
-               // Set a mock database connection for demo
-               setCurrentDatabase({
-                 id: connectionId,
-                 name: 'New Database Connection',
-                 type: 'postgresql',
-                 database: 'your_database',
-                 host: 'localhost',
-                 port: 5432,
-                 isConnected: true,
-                 lastConnected: new Date().toISOString(),
-               })
-               setConnectionStatus('connected')
-               setCurrentView('main')
-             }}
+                            onConnectionCreated={(connectionId) => {
+                 // Set a mock database connection for demo
+                 setCurrentDatabase({
+                   id: connectionId,
+                   name: 'New Database Connection',
+                   type: 'postgresql',
+                   database: 'your_database',
+                   host: 'localhost',
+                   port: 5432,
+                   isConnected: true,
+                   lastConnected: new Date().toISOString(),
+                 })
+                 setCurrentView('main')
+               }}
            />
          )
        case 'performance':

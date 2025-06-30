@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, BarChart3, TrendingUp, AlertTriangle, Clock, 
-  Database, Zap, Target, CheckCircle, AlertCircle, Activity 
+  Database, Zap, Target, CheckCircle 
 } from 'lucide-react';
 
 interface PerformanceData {

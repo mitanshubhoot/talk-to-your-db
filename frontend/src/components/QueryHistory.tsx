@@ -5,18 +5,11 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
   IconButton,
   Chip,
   TextField,
   Tabs,
   Tab,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Divider,
   Tooltip,
   Alert,
   CircularProgress,
@@ -107,7 +100,7 @@ export const QueryHistory: React.FC<Props> = ({ onQuerySelect, onSqlSelect }) =>
     }
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -153,10 +146,10 @@ export const QueryHistory: React.FC<Props> = ({ onQuerySelect, onSqlSelect }) =>
     return timestamp.toLocaleDateString();
   };
 
-  const renderHistoryItem = (item: QueryHistoryItem, index: number) => (
+  const renderHistoryItem = (item: QueryHistoryItem, _index: number) => (
     <ListItem 
       key={item.id} 
-      divider={index < historyItems.length - 1}
+      divider={_index < historyItems.length - 1}
       sx={{ 
         cursor: 'pointer', 
         '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
@@ -267,10 +260,10 @@ export const QueryHistory: React.FC<Props> = ({ onQuerySelect, onSqlSelect }) =>
     </ListItem>
   );
 
-  const renderTemplateItem = (template: QueryTemplate, index: number) => (
+  const renderTemplateItem = (template: QueryTemplate, _index: number) => (
     <ListItem 
       key={template.id} 
-      divider={index < templates.length - 1}
+      divider={_index < templates.length - 1}
       sx={{ 
         cursor: 'pointer', 
         '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
