@@ -67,8 +67,8 @@ export const textToSqlApi = {
   },
 
   // Test database connection
-  testConnection: async () => {
-    const response = await api.get('/connections/test')
+  testConnection: async (connectionData: any) => {
+    const response = await api.post('/connections/test', connectionData)
     return response.data
   },
 

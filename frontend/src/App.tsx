@@ -118,23 +118,11 @@ function App() {
 
   useEffect(() => {
     const initializeApp = async () => {
-      const isConnected = await testConnection()
-      if (isConnected) {
-        await loadCurrentDatabase()
-      }
+      // Load current database directly without testing connection
+      await loadCurrentDatabase()
     }
     initializeApp()
   }, [])
-
-  const testConnection = async () => {
-    try {
-      const response = await textToSqlApi.testConnection()
-      const isConnected = response.data.connected
-      return isConnected
-    } catch (error) {
-      return false
-    }
-  }
 
   const loadCurrentDatabase = async () => {
     try {
