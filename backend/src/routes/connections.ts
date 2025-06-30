@@ -26,6 +26,34 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get current (default) connection
+router.get('/current', async (req, res) => {
+  try {
+    const defaultConnection = await connectionManager.getDefaultConnection();
+    
+    if (!defaultConnection) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'No default connection found' }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...defaultConnection.connection,
+        password: undefined // Don't expose password
+      }
+    });
+  } catch (error) {
+    console.error('Error getting current connection:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to get current connection' }
+    });
+  }
+});
+
 // Create new connection
 router.post('/', async (req, res) => {
   try {
