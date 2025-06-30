@@ -6,9 +6,9 @@ echo "🔧 Building Talk to your DB backend for Render..."
 # Navigate to backend directory
 cd backend
 
-# Install dependencies
-echo "📦 Installing backend dependencies..."
-npm install
+# Install ALL dependencies (including devDependencies for TypeScript types)
+echo "📦 Installing ALL backend dependencies (including devDependencies)..."
+npm install --include=dev
 
 # Build TypeScript
 echo "🏗️ Building TypeScript..."
