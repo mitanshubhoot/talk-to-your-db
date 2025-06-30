@@ -62,7 +62,6 @@ export const QueryHistory: React.FC<Props> = ({ onQuerySelect, onSqlSelect }) =>
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedItem, setSelectedItem] = useState<QueryHistoryItem | null>(null);
   const [analytics, setAnalytics] = useState<any>(null);
 
   // Load data based on active tab
@@ -126,12 +125,12 @@ export const QueryHistory: React.FC<Props> = ({ onQuerySelect, onSqlSelect }) =>
     }
   };
 
-  const handleDeleteQuery = async (item: QueryHistoryItem) => {
+  const handleDeleteQuery = async (queryId: string) => {
     if (!window.confirm('Are you sure you want to delete this query?')) return;
     
     try {
-      await historyApi.deleteQuery(item.id);
-      setHistoryItems(prev => prev.filter(i => i.id !== item.id));
+      await historyApi.deleteQuery(queryId);
+      setHistoryItems(prev => prev.filter(i => i.id !== queryId));
     } catch (err) {
       setError('Failed to delete query');
     }
@@ -257,7 +256,7 @@ export const QueryHistory: React.FC<Props> = ({ onQuerySelect, onSqlSelect }) =>
           <Tooltip title="Delete">
             <IconButton 
               size="small" 
-              onClick={() => handleDeleteQuery(item)}
+              onClick={() => handleDeleteQuery(item.id)}
               color="error"
             >
               <Delete fontSize="small" />

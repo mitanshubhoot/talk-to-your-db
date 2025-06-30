@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, BarChart3, TrendingUp, AlertTriangle, Clock, 
-  Database, Zap, Target, CheckCircle, AlertCircle 
+  Database, Zap, Target, CheckCircle, AlertCircle, Activity 
 } from 'lucide-react';
 
 interface PerformanceData {
@@ -209,25 +209,25 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                         </div>
                       ) : (
                         <div className="divide-y divide-gray-200">
-                          {performanceData.slowestQueries.map((query, index) => (
-                            <div key={query.queryId} className="p-4">
+                          {performanceData.slowestQueries.map((_query, _index) => (
+                            <div key={_query.queryId} className="p-4">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-sm font-medium text-gray-500">#{index + 1}</span>
+                                    <span className="text-sm font-medium text-gray-500">#{_index + 1}</span>
                                     <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      query.executionTime > 5000 ? 'bg-red-100 text-red-800' :
-                                      query.executionTime > 1000 ? 'bg-yellow-100 text-yellow-800' :
+                                      _query.executionTime > 5000 ? 'bg-red-100 text-red-800' :
+                                      _query.executionTime > 1000 ? 'bg-yellow-100 text-yellow-800' :
                                       'bg-green-100 text-green-800'
                                     }`}>
-                                      {formatExecutionTime(query.executionTime)}
+                                      {formatExecutionTime(_query.executionTime)}
                                     </span>
                                   </div>
                                   <code className="text-sm bg-gray-100 p-2 rounded block font-mono">
-                                    {formatSql(query.sql)}
+                                    {formatSql(_query.sql)}
                                   </code>
                                   <div className="text-xs text-gray-500 mt-1">
-                                    {query.rowsReturned} rows • {new Date(query.timestamp).toLocaleString()}
+                                    {_query.rowsReturned} rows • {new Date(_query.timestamp).toLocaleString()}
                                   </div>
                                 </div>
                               </div>
@@ -258,26 +258,26 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {performanceData.topSuggestions.map((suggestion, index) => (
-                        <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      {performanceData.topSuggestions.map((_suggestion, _index) => (
+                        <div key={_suggestion.type} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-full ${getSeverityColor(suggestion.severity)}`}>
-                              {getTypeIcon(suggestion.type)}
+                            <div className={`p-2 rounded-full ${getSeverityColor(_suggestion.severity)}`}>
+                              {getTypeIcon(_suggestion.type)}
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(suggestion.severity)}`}>
-                                  {suggestion.severity.toUpperCase()}
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(_suggestion.severity)}`}>
+                                  {_suggestion.severity.toUpperCase()}
                                 </span>
-                                <span className="text-xs text-gray-500 capitalize">{suggestion.type}</span>
+                                <span className="text-xs text-gray-500 capitalize">{_suggestion.type}</span>
                               </div>
-                              <p className="font-medium text-gray-900 mb-1">{suggestion.message}</p>
-                              <p className="text-sm text-gray-600 mb-2">{suggestion.impact}</p>
-                              {suggestion.suggestedSql && (
+                              <p className="font-medium text-gray-900 mb-1">{_suggestion.message}</p>
+                              <p className="text-sm text-gray-600 mb-2">{_suggestion.impact}</p>
+                              {_suggestion.suggestedSql && (
                                 <div className="bg-gray-50 p-3 rounded border">
                                   <p className="text-xs font-medium text-gray-700 mb-1">Suggested SQL:</p>
                                   <code className="text-sm font-mono text-gray-800">
-                                    {suggestion.suggestedSql}
+                                    {_suggestion.suggestedSql}
                                   </code>
                                 </div>
                               )}
@@ -303,18 +303,18 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   ) : (
                     <div className="bg-white border border-gray-200 rounded-lg p-6">
                       <div className="space-y-4">
-                        {performanceData.recentTrend.map((trend, index) => (
-                          <div key={trend.date} className="flex items-center justify-between py-2">
+                        {performanceData.recentTrend.map((_trend, _index) => (
+                          <div key={_trend.date} className="flex items-center justify-between py-2">
                             <div className="flex items-center gap-3">
                               <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
                               <span className="text-sm font-medium">
-                                {new Date(trend.date).toLocaleDateString()}
+                                {new Date(_trend.date).toLocaleDateString()}
                               </span>
                             </div>
                             <div className="flex items-center gap-6 text-sm text-gray-600">
-                              <span>{trend.queryCount} queries</span>
+                              <span>{_trend.queryCount} queries</span>
                               <span className="font-medium">
-                                {formatExecutionTime(trend.avgTime)} avg
+                                {formatExecutionTime(_trend.avgTime)} avg
                               </span>
                             </div>
                           </div>

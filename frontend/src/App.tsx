@@ -108,7 +108,6 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [currentView, setCurrentView] = useState<ViewType>('main')
   const [userQuery, setUserQuery] = useState('')
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [expandedNav, setExpandedNav] = useState<string[]>(['assistant', 'configuration'])
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown')
   const [currentDatabase, setCurrentDatabase] = useState<DatabaseConnection | null>(null)
@@ -274,10 +273,7 @@ function App() {
     return 'error'
   }
 
-  const handleDatabaseDisconnect = () => {
-    setCurrentDatabase(null)
-    setConnectionStatus('disconnected')
-  }
+
 
   const handleNewChat = () => {
     setUserQuery('')

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Database, TestTube, Trash2, Settings, CheckCircle, XCircle, Loader } from 'lucide-react';
+import { X, Plus, Database, TestTube, Trash2, CheckCircle, Loader } from 'lucide-react';
 
 interface DatabaseConnection {
   id: string;
