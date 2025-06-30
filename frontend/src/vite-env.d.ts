@@ -1,6 +1,4 @@
 /// <reference types="vite/client" />
-/// <reference types="react" />
-/// <reference types="react-dom" />
 
 interface ImportMetaEnv {
   readonly VITE_BACKEND_URL: string
@@ -14,5 +12,8 @@ interface ImportMeta {
 }
 
 declare module 'react-dom/client' {
-  export * from 'react-dom/client'
+  export function createRoot(container: Element | DocumentFragment): {
+    render(children: React.ReactNode): void;
+    unmount(): void;
+  };
 } 
