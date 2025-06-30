@@ -1,0 +1,23 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm run start:backend"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[[services]]
+name = "backend"
+source = "backend"
+buildCommand = "npm install && npm run build"
+startCommand = "npm start"
+
+[[services]]  
+name = "frontend"
+source = "frontend"
+buildCommand = "npm install && npm run build"
+startCommand = "npm run preview"
+
+[environments.production.variables]
+NODE_ENV = "production"
+PORT = "3001" 

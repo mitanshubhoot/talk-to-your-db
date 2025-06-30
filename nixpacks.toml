@@ -1,0 +1,19 @@
+[phases.setup]
+nixPkgs = ["nodejs", "npm"]
+
+[phases.install]
+cmds = [
+  "npm run install:all"
+]
+
+[phases.build]
+cmds = [
+  "npm run build:all"
+]
+
+[start]
+cmd = "npm run start:backend"
+
+[variables]
+NODE_ENV = "production"
+PORT = "3001" 

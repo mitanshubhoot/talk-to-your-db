@@ -1,7 +1,8 @@
 {
   "name": "talk-to-your-db",
   "version": "1.0.0",
-  "description": "Talk to your database in natural language with AI",
+  "description": "AI-powered database query interface with natural language to SQL conversion",
+  "main": "backend/dist/index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
@@ -10,12 +11,25 @@
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "start": "cd backend && npm start"
+    "start": "cd backend && npm start",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run preview"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
   },
-  "keywords": ["sql", "ai", "database", "natural-language"],
-  "author": "",
-  "license": "MIT"
+  "keywords": [
+    "sql",
+    "ai", 
+    "database",
+    "natural-language",
+    "query-builder",
+    "text-to-sql"
+  ],
+  "author": "Mitanshu Bhoot",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
 } 
