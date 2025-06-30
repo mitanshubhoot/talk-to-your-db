@@ -7,9 +7,9 @@ const getBaseURL = () => {
     return '/api'
   }
   
-  // In production, use the deployed backend URL
-  // Your actual Render backend URL
-  const backendURL = import.meta.env.VITE_BACKEND_URL || 'https://talk-to-your-db.onrender.com'
+  // In production, use the deployed backend URL from environment variable
+  const backendURL = process.env.VITE_BACKEND_URL || 'https://talk-to-your-db.onrender.com'
+  console.log('Using backend URL:', backendURL) // Debug log
   return `${backendURL}/api`
 }
 

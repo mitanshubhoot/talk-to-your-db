@@ -16,4 +16,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
+  define: {
+    'process.env.VITE_BACKEND_URL': JSON.stringify(process.env.VITE_BACKEND_URL || 'https://talk-to-your-db.onrender.com')
+  }
 }) 
