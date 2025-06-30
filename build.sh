@@ -10,6 +10,10 @@ cd backend
 echo "📦 Installing ALL backend dependencies (including devDependencies)..."
 npm install --include=dev
 
+# Rebuild native modules for the current platform (fixes SQLite3 issues)
+echo "🔨 Rebuilding native modules for deployment platform..."
+npm rebuild
+
 # Build TypeScript
 echo "🏗️ Building TypeScript..."
 npm run build
