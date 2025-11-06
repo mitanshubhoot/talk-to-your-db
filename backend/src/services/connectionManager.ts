@@ -4,7 +4,7 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import fs from 'fs/promises';
 import path from 'path';
-import { DatabaseConnection, SchemaComparison, SchemaDifference, DatabaseDialect } from '../types/database.js';
+import { DatabaseConnection, DatabaseConnectionConfig, SchemaComparison, SchemaDifference, DatabaseDialect } from '../types/database.js';
 
 interface ConnectionPool {
   id: string;
@@ -61,10 +61,11 @@ export class ConnectionManager {
     }
   }
 
-  async createConnection(connectionData: Omit<DatabaseConnection, 'id' | 'createdAt' | 'updatedAt'>): Promise<DatabaseConnection> {
+  async createConnection(connectionData: DatabaseConnectionConfig): Promise<DatabaseConnection> {
     const connection: DatabaseConnection = {
       ...connectionData,
       id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      isDefault: connectionData.isDefault || false,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -87,7 +88,7 @@ export class ConnectionManager {
     return connection;
   }
 
-  async testConnection(connection: DatabaseConnection): Promise<boolean> {
+  async testConnection(connection: DatabaseConnectionConfig): Promise<boolean> {
     try {
       // Check if database type is actually supported by installed drivers
       const supportedTypes = ['postgresql', 'mysql', 'sqlite', 'mssql'];
@@ -95,21 +96,35 @@ export class ConnectionManager {
         throw new Error(`Database type '${connection.type}' is configured but requires additional drivers to be installed. Currently supported types: ${supportedTypes.join(', ')}`);
       }
       
+      console.log('Creating pool with config:', {
+        host: connection.host,
+        port: connection.port,
+        database: connection.database,
+        username: connection.username,
+        ssl: connection.ssl
+      });
+      
       const pool = await this.createPool(connection);
       
       // Test query based on database type
       const testQuery = this.getTestQuery(connection.type);
+      console.log('Executing test query:', testQuery);
       await this.executeQuery(pool, testQuery, connection.type);
       
       // Close test connection
       await this.closePool(pool, connection.type);
       return true;
     } catch (error) {
-      throw new Error(`Connection test failed: ${error}`);
+      console.error('Connection test error details:', error);
+      if (error instanceof Error) {
+        throw new Error(`Connection test failed: ${error.message}`);
+      } else {
+        throw new Error(`Connection test failed: ${String(error)}`);
+      }
     }
   }
 
-  private async createPool(connection: DatabaseConnection): Promise<any> {
+  private async createPool(connection: DatabaseConnectionConfig): Promise<any> {
     switch (connection.type) {
       case 'postgresql':
         const pgConfig: PoolConfig = {
@@ -150,7 +165,7 @@ export class ConnectionManager {
     }
   }
 
-  private getTestQuery(type: DatabaseConnection['type']): string {
+  private getTestQuery(type: DatabaseConnectionConfig['type']): string {
     switch (type) {
       case 'postgresql':
       case 'redshift':
@@ -177,7 +192,7 @@ export class ConnectionManager {
     }
   }
 
-  private async executeQuery(pool: any, query: string, type: DatabaseConnection['type']): Promise<any> {
+  private async executeQuery(pool: any, query: string, type: DatabaseConnectionConfig['type']): Promise<any> {
     switch (type) {
       case 'postgresql':
         const pgResult = await pool.query(query);
@@ -195,7 +210,7 @@ export class ConnectionManager {
     }
   }
 
-  private async closePool(pool: any, type: DatabaseConnection['type']) {
+  private async closePool(pool: any, type: DatabaseConnectionConfig['type']) {
     switch (type) {
       case 'postgresql':
         await pool.end();
@@ -237,9 +252,15 @@ export class ConnectionManager {
   }
 
   async getDefaultConnection(): Promise<ConnectionPool | null> {
-    if (this.defaultConnectionId) {
-      return await this.getConnection(this.defaultConnectionId);
+    // Always reload from file to get the latest default connection
+    const connections = await this.getAllStoredConnections();
+    const defaultConnection = connections.find(c => c.isDefault);
+    
+    if (defaultConnection) {
+      this.defaultConnectionId = defaultConnection.id;
+      return await this.getConnection(defaultConnection.id);
     }
+    
     return null;
   }
 
@@ -283,45 +304,75 @@ export class ConnectionManager {
   }
 
   private async discoverPostgreSQLSchema(pool: Pool): Promise<any> {
+    // Enhanced query to get all tables and columns with detailed information
     const tablesQuery = `
-      SELECT table_name, table_type
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-      ORDER BY table_name
+      SELECT 
+        t.table_name,
+        c.column_name,
+        c.data_type,
+        c.is_nullable,
+        c.column_default,
+        c.ordinal_position,
+        c.character_maximum_length,
+        c.numeric_precision,
+        c.numeric_scale,
+        CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END as is_primary_key,
+        CASE WHEN fk.column_name IS NOT NULL THEN true ELSE false END as is_foreign_key
+      FROM information_schema.tables t
+      JOIN information_schema.columns c ON t.table_name = c.table_name AND t.table_schema = c.table_schema
+      LEFT JOIN (
+        SELECT kcu.table_name, kcu.column_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu 
+          ON tc.constraint_name = kcu.constraint_name 
+          AND tc.table_schema = kcu.table_schema
+        WHERE tc.constraint_type = 'PRIMARY KEY'
+        AND tc.table_schema = 'public'
+      ) pk ON t.table_name = pk.table_name AND c.column_name = pk.column_name
+      LEFT JOIN (
+        SELECT kcu.table_name, kcu.column_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu 
+          ON tc.constraint_name = kcu.constraint_name 
+          AND tc.table_schema = kcu.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND tc.table_schema = 'public'
+      ) fk ON t.table_name = fk.table_name AND c.column_name = fk.column_name
+      WHERE t.table_schema = 'public' 
+      AND t.table_type = 'BASE TABLE'
+      ORDER BY t.table_name, c.ordinal_position;
     `;
+
+    const tablesResult = await pool.query(tablesQuery);
     
-    const tables = await pool.query(tablesQuery);
-    const schema: any = { tables: [], relationships: [] };
-
-    for (const table of tables.rows) {
-      const columnsQuery = `
-        SELECT 
-          column_name,
-          data_type,
-          is_nullable,
-          column_default,
-          character_maximum_length
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' AND table_name = $1
-        ORDER BY ordinal_position
-      `;
+    // Organize tables and columns with enhanced information
+    const tables: Record<string, any> = {};
+    
+    tablesResult.rows.forEach((row: any) => {
+      if (!tables[row.table_name]) {
+        tables[row.table_name] = { 
+          columns: [], 
+          primaryKeys: [],
+          foreignKeys: [],
+          indexes: []
+        };
+      }
+      tables[row.table_name].columns.push(row);
       
-      const columns = await pool.query(columnsQuery, [table.table_name]);
-      
-      schema.tables.push({
-        name: table.table_name,
-        type: table.table_type,
-        columns: columns.rows
-      });
-    }
+      // Track primary keys
+      if (row.is_primary_key) {
+        tables[row.table_name].primaryKeys.push(row.column_name);
+      }
+    });
 
-    // Get relationships
+    // Get foreign key relationships with detailed information
     const relationshipsQuery = `
       SELECT
-        tc.table_name,
-        kcu.column_name,
-        ccu.table_name AS foreign_table_name,
-        ccu.column_name AS foreign_column_name
+        kcu.table_name as table,
+        kcu.column_name as column,
+        ccu.table_name AS referencedTable,
+        ccu.column_name AS referencedColumn,
+        tc.constraint_name
       FROM information_schema.table_constraints AS tc
       JOIN information_schema.key_column_usage AS kcu
         ON tc.constraint_name = kcu.constraint_name
@@ -329,13 +380,127 @@ export class ConnectionManager {
       JOIN information_schema.constraint_column_usage AS ccu
         ON ccu.constraint_name = tc.constraint_name
         AND ccu.table_schema = tc.table_schema
-      WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public'
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+      AND tc.table_schema = 'public'
+      ORDER BY kcu.table_name, kcu.column_name;
     `;
-    
-    const relationships = await pool.query(relationshipsQuery);
-    schema.relationships = relationships.rows;
 
-    return schema;
+    const relationshipsResult = await pool.query(relationshipsQuery);
+
+    const relationships = relationshipsResult.rows.map((row: any) => ({
+      table: row.table,
+      column: row.column,
+      referencedTable: row.referencedtable,
+      referencedColumn: row.referencedcolumn
+    }));
+
+    // Add foreign key information to table metadata
+    relationshipsResult.rows.forEach((row: any) => {
+      if (tables[row.table]) {
+        tables[row.table].foreignKeys.push({
+          column: row.column,
+          referencedTable: row.referencedtable,
+          referencedColumn: row.referencedcolumn
+        });
+      }
+    });
+
+    // Get indexes for each table
+    const indexesQuery = `
+      SELECT
+        t.relname as table_name,
+        i.relname as index_name,
+        array_agg(a.attname ORDER BY c.ordinality) as columns,
+        ix.indisunique as is_unique
+      FROM pg_class t
+      JOIN pg_index ix ON t.oid = ix.indrelid
+      JOIN pg_class i ON i.oid = ix.indexrelid
+      JOIN pg_namespace n ON n.oid = t.relnamespace
+      CROSS JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS c(attnum, ordinality)
+      JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = c.attnum
+      WHERE n.nspname = 'public'
+      AND t.relkind = 'r'
+      AND NOT ix.indisprimary  -- Exclude primary key indexes
+      GROUP BY t.relname, i.relname, ix.indisunique
+      ORDER BY t.relname, i.relname;
+    `;
+
+    try {
+      const indexesResult = await pool.query(indexesQuery);
+      indexesResult.rows.forEach((row: any) => {
+        if (tables[row.table_name]) {
+          // Ensure columns is always an array
+          let columns = row.columns;
+          if (typeof columns === 'string') {
+            // Parse PostgreSQL array format like "{email}" or "{col1,col2}"
+            columns = columns.replace(/[{}]/g, '').split(',').map((col: string) => col.trim());
+          }
+          
+          tables[row.table_name].indexes.push({
+            name: row.index_name,
+            columns: Array.isArray(columns) ? columns : [columns],
+            isUnique: row.is_unique
+          });
+        }
+      });
+    } catch (indexError) {
+      console.warn('Could not retrieve index information:', indexError);
+    }
+
+    // Get views information
+    const viewsQuery = `
+      SELECT 
+        table_name as name,
+        view_definition as definition
+      FROM information_schema.views
+      WHERE table_schema = 'public'
+      ORDER BY table_name;
+    `;
+
+    let views: Array<{ name: string; definition: string }> = [];
+    try {
+      const viewsResult = await pool.query(viewsQuery);
+      views = viewsResult.rows.map((row: any) => ({
+        name: row.name,
+        definition: row.definition
+      }));
+    } catch (viewError) {
+      console.warn('Could not retrieve view information:', viewError);
+    }
+
+    // Get row counts for each table (with error handling for large tables)
+    const tableNames = Object.keys(tables);
+    const rowCountPromises = tableNames.map(async (tableName) => {
+      try {
+        const countQuery = `SELECT COUNT(*) as count FROM "${tableName}"`;
+        const countResult = await pool.query(countQuery);
+        return { tableName, count: parseInt(countResult.rows[0].count) };
+      } catch (error) {
+        console.warn(`Could not get row count for table ${tableName}:`, error);
+        return { tableName, count: 0 };
+      }
+    });
+
+    // Execute row count queries with a reasonable timeout
+    const rowCounts = await Promise.allSettled(rowCountPromises);
+    rowCounts.forEach((result, index) => {
+      const tableName = tableNames[index];
+      if (result.status === 'fulfilled') {
+        tables[tableName].rowCount = result.value.count;
+      } else {
+        console.warn(`Row count failed for table ${tableName}:`, result.reason);
+        tables[tableName].rowCount = 0;
+      }
+    });
+
+    const discoveryTime = new Date();
+
+    return {
+      tables,
+      relationships,
+      views,
+      lastDiscovered: discoveryTime
+    };
   }
 
   private async discoverMySQLSchema(pool: any, database: string): Promise<any> {
@@ -399,7 +564,7 @@ export class ConnectionManager {
     return schema;
   }
 
-  getDatabaseDialect(type: DatabaseConnection['type']): DatabaseDialect {
+  getDatabaseDialect(type: DatabaseConnectionConfig['type']): DatabaseDialect {
     switch (type) {
       case 'postgresql':
       case 'redshift':

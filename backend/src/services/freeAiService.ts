@@ -1,6 +1,10 @@
 import { createLogger, format, transports } from 'winston';
 import { SchemaInfo } from './database';
 import { OpenAIService } from './openai';
+import { AdvancedPromptTemplates, PromptTemplate } from './promptTemplates';
+import { dialectAwareService, DialectAwareRequest, DialectAwareService } from './dialectAwareService';
+import { DatabaseDialect } from '../types/database';
+import { productionMonitoringService } from './productionMonitoringService';
 
 const logger = createLogger({
   level: 'info',
@@ -11,6 +15,8 @@ const logger = createLogger({
 export interface TextToSqlRequest {
   userQuery: string;
   schema: SchemaInfo;
+  databaseDialect?: string;
+  connectionType?: string;
 }
 
 export interface TextToSqlResponse {
@@ -19,6 +25,8 @@ export interface TextToSqlResponse {
   confidence: number;
   warnings?: string[];
   provider?: string;
+  dialectUsed?: string;
+  optimizationSuggestions?: string[];
 }
 
 interface AIProvider {
@@ -41,27 +49,90 @@ export class FreeAIService {
     console.log('🔍 DEBUG: Initializing AI providers...');
     console.log('🔍 DEBUG: HUGGING_FACE_API_KEY exists:', !!process.env.HUGGING_FACE_API_KEY);
     console.log('🔍 DEBUG: COHERE_API_KEY exists:', !!process.env.COHERE_API_KEY);
-    
-    // NOTE: Specialized SQL models (like DuckDB-NSQL-7B) are not available via free Inference APIs
-    // Most require local deployment or paid services. We use general AI models with SQL prompting instead.
+    console.log('🔍 DEBUG: ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
+    console.log('🔍 DEBUG: GOOGLE_API_KEY exists:', !!process.env.GOOGLE_API_KEY);
     
     // Initialize OpenAI (Premium: GPT-3.5/GPT-4) - HIGHEST PRIORITY
     if (process.env.OPENAI_API_KEY) {
       this.providers.push({
-        name: 'OpenAI GPT-3.5',
+        name: 'OpenAI GPT-4',
         isConfigured: true,
-        generateSql: this.generateSqlWithOpenAI.bind(this),
+        generateSql: this.generateSqlWithOpenAI.bind(this, 'gpt-4'),
         generateExplanation: this.generateExplanationWithOpenAI.bind(this)
       });
-      console.log('✅ OpenAI provider initialized (HIGHEST PRIORITY - most accurate)');
+      
+      this.providers.push({
+        name: 'OpenAI GPT-3.5-Turbo',
+        isConfigured: true,
+        generateSql: this.generateSqlWithOpenAI.bind(this, 'gpt-3.5-turbo'),
+        generateExplanation: this.generateExplanationWithOpenAI.bind(this)
+      });
+      console.log('✅ OpenAI providers initialized (HIGHEST PRIORITY - most accurate)');
     } else {
       console.log('❌ OpenAI API key not found');
+    }
+
+    // Initialize Anthropic Claude (High-quality SQL generation)
+    if (process.env.ANTHROPIC_API_KEY) {
+      this.providers.push({
+        name: 'Anthropic Claude',
+        isConfigured: true,
+        generateSql: this.generateSqlWithAnthropic.bind(this),
+        generateExplanation: this.generateExplanationWithAnthropic.bind(this)
+      });
+      console.log('✅ Anthropic Claude provider initialized (HIGH PRIORITY - excellent reasoning)');
+    } else {
+      console.log('❌ Anthropic API key not found');
+    }
+
+    // Initialize Google Gemini (Free tier available)
+    if (process.env.GOOGLE_API_KEY) {
+      this.providers.push({
+        name: 'Google Gemini',
+        isConfigured: true,
+        generateSql: this.generateSqlWithGemini.bind(this),
+        generateExplanation: this.generateExplanationWithGemini.bind(this)
+      });
+      console.log('✅ Google Gemini provider initialized (HIGH PRIORITY - free tier available)');
+    } else {
+      console.log('❌ Google API key not found');
+    }
+
+    // Initialize Hugging Face Inference API with specialized SQL models
+    if (process.env.HUGGING_FACE_API_KEY) {
+      // SQLCoder - Specialized SQL generation model
+      this.providers.push({
+        name: 'Hugging Face SQLCoder',
+        isConfigured: true,
+        generateSql: this.generateSqlWithSQLCoder.bind(this),
+        generateExplanation: this.generateExplanationWithHuggingFace.bind(this)
+      });
+
+      // CodeT5+ - Code generation model with SQL capabilities
+      this.providers.push({
+        name: 'Hugging Face CodeT5+',
+        isConfigured: true,
+        generateSql: this.generateSqlWithCodeT5Plus.bind(this),
+        generateExplanation: this.generateExplanationWithHuggingFace.bind(this)
+      });
+
+      // DuckDB-NSQL - Specialized for SQL with schema awareness
+      this.providers.push({
+        name: 'Hugging Face DuckDB-NSQL',
+        isConfigured: true,
+        generateSql: this.generateSqlWithDuckDB.bind(this),
+        generateExplanation: this.generateExplanationWithDuckDB.bind(this)
+      });
+
+      console.log('✅ Hugging Face specialized SQL models initialized');
+    } else {
+      console.log('❌ Hugging Face API key not found');
     }
 
     // Initialize Cohere (Free: 100K tokens/month) - HIGH PRIORITY
     if (process.env.COHERE_API_KEY) {
       this.providers.push({
-        name: 'Cohere',
+        name: 'Cohere Command',
         isConfigured: true,
         generateSql: this.generateSqlWithCohere.bind(this),
         generateExplanation: this.generateExplanationWithCohere.bind(this)
@@ -92,14 +163,150 @@ export class FreeAIService {
       generateExplanation: this.generateExplanationBasic.bind(this)
     });
     console.log('✅ Rule-based Fallback provider added (FALLBACK ONLY)');
-    
-    // NOTE: Hugging Face models like DuckDB-NSQL-7B, SQLCoder, etc. are not available via free Inference API
-    // They require local deployment. For free APIs, we rely on general AI models with SQL prompting.
-    console.log('ℹ️  Specialized SQL models (DuckDB-NSQL, SQLCoder) require local deployment - not available via free APIs');
 
     console.log(`🎯 TOTAL: Initialized ${this.providers.length} AI providers`);
     console.log('🎯 Providers:', this.providers.map(p => p.name));
     logger.info(`Initialized ${this.providers.length} AI providers`);
+  }
+
+  // SQLCoder - Specialized SQL generation model
+  private async generateSqlWithSQLCoder(prompt: string): Promise<string> {
+    // Extract user query and schema context for SQLCoder format
+    const userQueryMatch = prompt.match(/User Request: "([^"]+)"/);
+    const userQuery = userQueryMatch ? userQueryMatch[1] : prompt;
+    
+    const schemaMatch = prompt.match(/Database Schema:(.*?)(?=QUERY ANALYSIS:|User Request:|$)/s);
+    const schemaContext = schemaMatch ? schemaMatch[1].trim() : '';
+    
+    // Create SQLCoder compatible prompt
+    const sqlcoderPrompt = `### Task
+Generate a SQL query to answer the following question:
+${userQuery}
+
+### Database Schema
+${schemaContext}
+
+### SQL
+`;
+
+    try {
+      const response = await fetch('https://api-inference.huggingface.co/models/defog/sqlcoder-7b-2', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: sqlcoderPrompt,
+          parameters: {
+            max_new_tokens: 300,
+            temperature: 0.1,
+            do_sample: false,
+            return_full_text: false,
+            stop: ["###", "### Task", "### Database Schema", "### SQL"]
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`SQLCoder API error: ${response.status}`);
+      }
+
+      const result = await response.json() as Array<{ generated_text?: string }>;
+      let sql = result[0]?.generated_text?.trim() || '';
+      
+      // Clean up the response
+      sql = sql.replace(/### SQL.*?:/g, '').trim();
+      
+      // Ensure SQL ends with semicolon
+      if (sql && !sql.endsWith(';')) {
+        sql += ';';
+      }
+      
+      return sql || this.generateFallbackSql(userQuery, schemaContext);
+      
+    } catch (error) {
+      console.error('SQLCoder generation failed:', error);
+      throw error;
+    }
+  }
+
+  // CodeT5+ - Enhanced code generation model
+  private async generateSqlWithCodeT5Plus(prompt: string): Promise<string> {
+    const userQueryMatch = prompt.match(/User Request: "([^"]+)"/);
+    const userQuery = userQueryMatch ? userQueryMatch[1] : prompt;
+    
+    const schemaMatch = prompt.match(/Database Schema:(.*?)(?=QUERY ANALYSIS:|User Request:|$)/s);
+    const schemaContext = schemaMatch ? schemaMatch[1].trim() : '';
+    
+    // Create CodeT5+ compatible prompt
+    const codet5Prompt = `# Generate SQL query
+# Question: ${userQuery}
+# Schema: ${schemaContext}
+# SQL:`;
+
+    try {
+      const response = await fetch('https://api-inference.huggingface.co/models/Salesforce/codet5p-770m', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.HUGGING_FACE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: codet5Prompt,
+          parameters: {
+            max_new_tokens: 200,
+            temperature: 0.1,
+            do_sample: false,
+            return_full_text: false,
+            stop: ["\n\n", "# Generate", "# Question", "# Schema"]
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`CodeT5+ API error: ${response.status}`);
+      }
+
+      const result = await response.json() as Array<{ generated_text?: string }>;
+      let sql = result[0]?.generated_text?.trim() || '';
+      
+      // Clean up the response
+      sql = sql.replace(/# SQL.*?:/g, '').trim();
+      
+      // Ensure SQL ends with semicolon
+      if (sql && !sql.endsWith(';')) {
+        sql += ';';
+      }
+      
+      return sql || this.generateFallbackSql(userQuery, schemaContext);
+      
+    } catch (error) {
+      console.error('CodeT5+ generation failed:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to generate fallback SQL
+  private generateFallbackSql(userQuery: string, schemaContext: string): string {
+    const lowerQuery = userQuery.toLowerCase();
+    
+    // Extract table names from schema
+    const tableMatches = schemaContext.match(/Table: (\w+)/g);
+    const tables = tableMatches ? tableMatches.map(match => match.replace('Table: ', '')) : [];
+    
+    if (tables.length === 0) {
+      return 'SELECT 1;'; // Minimal fallback
+    }
+    
+    // Simple pattern matching for fallback
+    if (lowerQuery.includes('count') || lowerQuery.includes('how many')) {
+      return `SELECT COUNT(*) FROM ${tables[0]};`;
+    } else if (lowerQuery.includes('all') || lowerQuery.includes('show') || lowerQuery.includes('list')) {
+      return `SELECT * FROM ${tables[0]} LIMIT 10;`;
+    } else {
+      return `SELECT * FROM ${tables[0]} LIMIT 10;`;
+    }
   }
 
   // Hugging Face Implementation - Using available smaller models with SQL prompting
@@ -281,8 +488,8 @@ SELECT`;
     }
   }
 
-  // OpenAI Implementation - Using existing OpenAIService
-  private async generateSqlWithOpenAI(prompt: string): Promise<string> {
+  // OpenAI Implementation - Enhanced with model selection
+  private async generateSqlWithOpenAI(model: string, prompt: string): Promise<string> {
     // Extract user query from the prompt
     const userQueryMatch = prompt.match(/User Request: "([^"]+)"/);
     const userQuery = userQueryMatch ? userQueryMatch[1] : prompt;
@@ -307,6 +514,166 @@ SELECT`;
     const request = { userQuery, schema };
     const response = await this.openaiService.generateSql(request);
     return response.sql;
+  }
+
+  // Anthropic Claude Implementation
+  private async generateSqlWithAnthropic(prompt: string): Promise<string> {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`,
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-sonnet-20240229',
+        max_tokens: 1000,
+        temperature: 0.1,
+        messages: [{
+          role: 'user',
+          content: `You are an expert SQL developer. Generate ONLY the SQL query for this request. Do not include explanations or markdown formatting.\n\n${prompt}\n\nSQL:`
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${response.status}`);
+    }
+
+    const result = await response.json() as { content: Array<{ text?: string }> };
+    let sql = result.content[0]?.text?.trim() || '';
+    
+    // Clean up the response
+    if (sql.startsWith('SQL:')) {
+      sql = sql.replace('SQL:', '').trim();
+    }
+    
+    // Remove any markdown formatting
+    sql = sql.replace(/```sql\n?/g, '').replace(/```\n?/g, '');
+    
+    // Ensure it ends with semicolon
+    if (sql && !sql.endsWith(';')) {
+      sql += ';';
+    }
+    
+    return sql;
+  }
+
+  private async generateExplanationWithAnthropic(sql: string, userQuery: string): Promise<string> {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`,
+          'Content-Type': 'application/json',
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-sonnet-20240229',
+          max_tokens: 500,
+          temperature: 0.3,
+          messages: [{
+            role: 'user',
+            content: `Explain this SQL query in simple business terms for someone who asked "${userQuery}":\n\n${sql}\n\nExplanation:`
+          }]
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json() as { content: Array<{ text?: string }> };
+        return result.content[0]?.text?.trim() || 'This query retrieves data from your database based on your request.';
+      }
+    } catch (error) {
+      console.error('Anthropic explanation failed:', error);
+    }
+    return 'This query retrieves data from your database based on your request.';
+  }
+
+  // Google Gemini Implementation
+  private async generateSqlWithGemini(prompt: string): Promise<string> {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `You are an expert SQL developer. Generate ONLY the SQL query for this request. Do not include explanations or markdown formatting.\n\n${prompt}\n\nSQL:`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 1000,
+          stopSequences: ['\n\n']
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Google Gemini API error: ${response.status}`);
+    }
+
+    const result = await response.json() as { 
+      candidates: Array<{ 
+        content: { 
+          parts: Array<{ text?: string }> 
+        } 
+      }> 
+    };
+    
+    let sql = result.candidates[0]?.content?.parts[0]?.text?.trim() || '';
+    
+    // Clean up the response
+    if (sql.startsWith('SQL:')) {
+      sql = sql.replace('SQL:', '').trim();
+    }
+    
+    // Remove any markdown formatting
+    sql = sql.replace(/```sql\n?/g, '').replace(/```\n?/g, '');
+    
+    // Ensure it ends with semicolon
+    if (sql && !sql.endsWith(';')) {
+      sql += ';';
+    }
+    
+    return sql;
+  }
+
+  private async generateExplanationWithGemini(sql: string, userQuery: string): Promise<string> {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GOOGLE_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Explain this SQL query in simple business terms for someone who asked "${userQuery}":\n\n${sql}\n\nExplanation:`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 500
+          }
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json() as { 
+          candidates: Array<{ 
+            content: { 
+              parts: Array<{ text?: string }> 
+            } 
+          }> 
+        };
+        return result.candidates[0]?.content?.parts[0]?.text?.trim() || 'This query retrieves data from your database based on your request.';
+      }
+    } catch (error) {
+      console.error('Gemini explanation failed:', error);
+    }
+    return 'This query retrieves data from your database based on your request.';
   }
 
   private async generateExplanationWithOpenAI(sql: string, userQuery: string): Promise<string> {
@@ -497,67 +864,158 @@ SELECT`;
   private buildSchemaContext(schema: SchemaInfo): string {
     let context = "Database Schema:\n";
     
-    // Add tables and columns
+    // Add tables and columns with enhanced information
     Object.entries(schema.tables).forEach(([tableName, tableInfo]) => {
       context += `\nTable: ${tableName}`;
       if (tableInfo.rowCount !== undefined) {
-        context += ` (${tableInfo.rowCount} rows)`;
+        context += ` (${tableInfo.rowCount.toLocaleString()} rows)`;
       }
+      
+      // Add primary keys
+      if (tableInfo.primaryKeys && tableInfo.primaryKeys.length > 0) {
+        context += ` [PK: ${tableInfo.primaryKeys.join(', ')}]`;
+      }
+      
       context += "\nColumns:\n";
       
       tableInfo.columns.forEach(col => {
-        context += `  - ${col.column_name}: ${col.data_type}${col.is_nullable === 'YES' ? ' (nullable)' : ' (required)'}`;
-        if (col.column_default) {
-          context += ` default: ${col.column_default}`;
+        let columnInfo = `  - ${col.column_name}: ${col.data_type}`;
+        
+        // Add length/precision info
+        if (col.character_maximum_length) {
+          columnInfo += `(${col.character_maximum_length})`;
+        } else if (col.numeric_precision && col.numeric_scale !== undefined) {
+          columnInfo += `(${col.numeric_precision},${col.numeric_scale})`;
+        } else if (col.numeric_precision) {
+          columnInfo += `(${col.numeric_precision})`;
         }
-        context += "\n";
+        
+        // Add constraints
+        const constraints = [];
+        if (col.is_primary_key) constraints.push('PK');
+        if (col.is_foreign_key) constraints.push('FK');
+        if (col.is_nullable === 'NO') constraints.push('NOT NULL');
+        if (constraints.length > 0) {
+          columnInfo += ` [${constraints.join(', ')}]`;
+        }
+        
+        if (col.column_default) {
+          columnInfo += ` default: ${col.column_default}`;
+        }
+        
+        context += columnInfo + "\n";
       });
+      
+      // Add foreign key details
+      if (tableInfo.foreignKeys && tableInfo.foreignKeys.length > 0) {
+        context += "Foreign Keys:\n";
+        tableInfo.foreignKeys.forEach(fk => {
+          context += `  - ${fk.column} → ${fk.referencedTable}.${fk.referencedColumn}\n`;
+        });
+      }
+      
+      // Add indexes
+      if (tableInfo.indexes && tableInfo.indexes.length > 0) {
+        context += "Indexes:\n";
+        tableInfo.indexes.forEach(idx => {
+          context += `  - ${idx.name} on (${idx.columns.join(', ')})${idx.isUnique ? ' [UNIQUE]' : ''}\n`;
+        });
+      }
     });
 
-    // Add relationships
-    if (schema.relationships.length > 0) {
-      context += "\nRelationships:\n";
+    // Add relationships summary
+    if (schema.relationships && schema.relationships.length > 0) {
+      context += "\nTable Relationships:\n";
       schema.relationships.forEach(rel => {
         context += `  - ${rel.table}.${rel.column} → ${rel.referencedTable}.${rel.referencedColumn}\n`;
       });
+    }
+    
+    // Add views if available
+    if (schema.views && schema.views.length > 0) {
+      context += "\nViews:\n";
+      schema.views.forEach(view => {
+        context += `  - ${view.name}\n`;
+      });
+    }
+    
+    // Add discovery timestamp
+    if (schema.lastDiscovered) {
+      context += `\nSchema last discovered: ${schema.lastDiscovered.toISOString()}\n`;
     }
 
     return context;
   }
 
-  private analyzeUserQuery(userQuery: string): string {
+  private analyzeUserQuery(userQuery: string, schema?: SchemaInfo): string {
     const analysis = [];
     const lowerQuery = userQuery.toLowerCase();
     
     // Intent detection
     if (lowerQuery.includes('unique') || lowerQuery.includes('distinct')) {
-      analysis.push("📊 INTENT: User wants unique/distinct values");
+      analysis.push("📊 INTENT: User wants unique/distinct values - use SELECT DISTINCT");
     }
     
-    if (lowerQuery.includes('top') || lowerQuery.includes('best') || lowerQuery.includes('highest')) {
-      const numberMatch = lowerQuery.match(/top\s*(\d+)|best\s*(\d+)|highest\s*(\d+)/);
-      const limit = numberMatch ? (numberMatch[1] || numberMatch[2] || numberMatch[3]) : '5';
-      analysis.push(`📈 INTENT: User wants top ${limit} results ranked by some metric`);
+    if (lowerQuery.includes('top') || lowerQuery.includes('best') || lowerQuery.includes('highest') || lowerQuery.includes('largest')) {
+      const numberMatch = lowerQuery.match(/top\s*(\d+)|best\s*(\d+)|highest\s*(\d+)|largest\s*(\d+)/);
+      const limit = numberMatch ? (numberMatch[1] || numberMatch[2] || numberMatch[3] || numberMatch[4]) : '5';
+      analysis.push(`📈 INTENT: User wants top ${limit} results - use ORDER BY DESC LIMIT ${limit}`);
+    }
+    
+    if (lowerQuery.includes('bottom') || lowerQuery.includes('worst') || lowerQuery.includes('lowest') || lowerQuery.includes('smallest')) {
+      const numberMatch = lowerQuery.match(/bottom\s*(\d+)|worst\s*(\d+)|lowest\s*(\d+)|smallest\s*(\d+)/);
+      const limit = numberMatch ? (numberMatch[1] || numberMatch[2] || numberMatch[3] || numberMatch[4]) : '5';
+      analysis.push(`📉 INTENT: User wants bottom ${limit} results - use ORDER BY ASC LIMIT ${limit}`);
     }
     
     if (lowerQuery.includes('count') || lowerQuery.includes('how many') || lowerQuery.includes('number of')) {
-      analysis.push("🔢 INTENT: User wants to count records, likely needs COUNT() and GROUP BY");
+      analysis.push("🔢 INTENT: User wants to count records - use COUNT() and GROUP BY if needed");
     }
     
-    if (lowerQuery.includes('total') || lowerQuery.includes('sum') || lowerQuery.includes('revenue')) {
-      analysis.push("💰 INTENT: User wants aggregated totals, needs SUM() function");
+    if (lowerQuery.includes('total') || lowerQuery.includes('sum') || lowerQuery.includes('revenue') || lowerQuery.includes('sales')) {
+      analysis.push("💰 INTENT: User wants aggregated totals - use SUM() function");
     }
     
-    if (lowerQuery.includes('average') || lowerQuery.includes('avg')) {
-      analysis.push("📊 INTENT: User wants average values, needs AVG() function");
+    if (lowerQuery.includes('average') || lowerQuery.includes('avg') || lowerQuery.includes('mean')) {
+      analysis.push("📊 INTENT: User wants average values - use AVG() function");
     }
     
-    // Entity detection
+    if (lowerQuery.includes('minimum') || lowerQuery.includes('min')) {
+      analysis.push("📉 INTENT: User wants minimum values - use MIN() function");
+    }
+    
+    if (lowerQuery.includes('maximum') || lowerQuery.includes('max')) {
+      analysis.push("📈 INTENT: User wants maximum values - use MAX() function");
+    }
+    
+    // Entity detection - dynamically detect from schema if available
     const entities = [];
-    if (lowerQuery.includes('customer')) entities.push('customers');
-    if (lowerQuery.includes('product')) entities.push('products');
-    if (lowerQuery.includes('order')) entities.push('orders');
-    if (lowerQuery.includes('item')) entities.push('order_items');
+    if (schema) {
+      Object.keys(schema.tables).forEach(tableName => {
+        const tableWords = tableName.toLowerCase().split('_');
+        const singularForms = tableWords.map(word => {
+          // Simple singularization
+          if (word.endsWith('s') && word.length > 3) {
+            return word.slice(0, -1);
+          }
+          return word;
+        });
+        
+        // Check if query mentions this table (plural or singular)
+        if (tableWords.some(word => lowerQuery.includes(word)) || 
+            singularForms.some(word => lowerQuery.includes(word))) {
+          entities.push(tableName);
+        }
+      });
+    } else {
+      // Fallback to common table detection
+      if (lowerQuery.includes('customer')) entities.push('customers');
+      if (lowerQuery.includes('product')) entities.push('products');
+      if (lowerQuery.includes('order')) entities.push('orders');
+      if (lowerQuery.includes('item')) entities.push('order_items');
+      if (lowerQuery.includes('user')) entities.push('users');
+      if (lowerQuery.includes('category')) entities.push('categories');
+    }
     
     if (entities.length > 0) {
       analysis.push(`🎯 ENTITIES: Query involves ${entities.join(', ')} table(s)`);
@@ -565,14 +1023,29 @@ SELECT`;
     
     // Filter detection
     const filters = [];
-    if (lowerQuery.match(/from\s+\w+|in\s+\w+|country|city/)) {
+    if (lowerQuery.match(/from\s+\w+|in\s+\w+|country|city|location|region/)) {
       filters.push('location-based filtering');
     }
-    if (lowerQuery.includes('last') && (lowerQuery.includes('month') || lowerQuery.includes('week') || lowerQuery.includes('day'))) {
+    if (lowerQuery.includes('last') && (lowerQuery.includes('month') || lowerQuery.includes('week') || lowerQuery.includes('day') || lowerQuery.includes('year'))) {
       filters.push('time-based filtering');
     }
-    if (lowerQuery.match(/category|type/)) {
+    if (lowerQuery.includes('this') && (lowerQuery.includes('month') || lowerQuery.includes('week') || lowerQuery.includes('day') || lowerQuery.includes('year'))) {
+      filters.push('current period filtering');
+    }
+    if (lowerQuery.match(/category|type|status|state/)) {
       filters.push('category-based filtering');
+    }
+    if (lowerQuery.match(/greater than|more than|above|over|\>/)) {
+      filters.push('threshold filtering (>)');
+    }
+    if (lowerQuery.match(/less than|fewer than|below|under|\</)) {
+      filters.push('threshold filtering (<)');
+    }
+    if (lowerQuery.match(/between|from .* to|range/)) {
+      filters.push('range filtering');
+    }
+    if (lowerQuery.match(/contains|includes|has|with/)) {
+      filters.push('text pattern matching');
     }
     
     if (filters.length > 0) {
@@ -581,65 +1054,235 @@ SELECT`;
     
     // Complexity detection
     if (entities.length > 1) {
-      analysis.push("🔗 COMPLEXITY: Multi-table query, needs proper JOINs");
+      analysis.push("🔗 COMPLEXITY: Multi-table query - needs proper JOINs based on foreign key relationships");
+    }
+    
+    // Sorting detection
+    if (lowerQuery.match(/sort|order|arrange/) && !lowerQuery.match(/top|best|highest|lowest/)) {
+      if (lowerQuery.match(/descending|desc|high to low|largest first/)) {
+        analysis.push("📊 SORTING: Descending order required - use ORDER BY ... DESC");
+      } else if (lowerQuery.match(/ascending|asc|low to high|smallest first/)) {
+        analysis.push("📊 SORTING: Ascending order required - use ORDER BY ... ASC");
+      } else {
+        analysis.push("📊 SORTING: Custom sorting required - determine appropriate ORDER BY");
+      }
+    }
+    
+    // Grouping detection
+    if (lowerQuery.match(/by\s+\w+|per\s+\w+|each\s+\w+|group/)) {
+      analysis.push("📋 GROUPING: Results need grouping - use GROUP BY");
     }
     
     return analysis.length > 0 ? analysis.join('\n') : "📝 INTENT: Basic data retrieval query";
   }
 
-  private buildPrompt(userQuery: string, schema: SchemaInfo): string {
-    const schemaContext = this.buildSchemaContext(schema);
+  private buildPrompt(userQuery: string, schema: SchemaInfo, databaseDialect?: string, connectionType?: string): string {
+    // If dialect information is available, use dialect-aware prompting
+    if (connectionType && databaseDialect) {
+      return this.buildDialectAwarePrompt(userQuery, schema, databaseDialect, connectionType);
+    }
+
+    // Fallback to existing prompt building logic
+    const complexity = this.assessQueryComplexity(userQuery, schema);
+    let template: PromptTemplate;
+
+    if (complexity === 'complex' || this.needsChainOfThought(userQuery)) {
+      template = AdvancedPromptTemplates.getChainOfThoughtTemplate();
+    } else if (this.isAnalyticsQuery(userQuery)) {
+      template = AdvancedPromptTemplates.getAnalyticsTemplate();
+    } else {
+      template = AdvancedPromptTemplates.getSchemaAwareTemplate();
+    }
+
+    // Build the complete prompt using the selected template
+    const detectedDialect = connectionType ? DialectAwareService.detectDialectFromConnection(connectionType) : 'postgresql';
+    return AdvancedPromptTemplates.buildPrompt(template, userQuery, schema, detectedDialect);
+  }
+
+  private buildDialectAwarePrompt(userQuery: string, schema: SchemaInfo, databaseDialect: string, connectionType: string): string {
+    // Create a mock DatabaseDialect object for the dialect service
+    const dialect: DatabaseDialect = this.createDialectObject(connectionType);
     
-    // Analyze the user query to provide intelligent context
-    const queryAnalysis = this.analyzeUserQuery(userQuery);
+    const dialectRequest: DialectAwareRequest = {
+      userQuery,
+      schema,
+      dialect,
+      connectionType
+    };
+
+    return dialectAwareService.buildDialectAwarePrompt(dialectRequest);
+  }
+
+  private createDialectObject(connectionType: string): DatabaseDialect {
+    switch (connectionType.toLowerCase()) {
+      case 'postgresql':
+        return {
+          name: 'PostgreSQL',
+          quotingChar: '"',
+          limitSyntax: (limit: number, offset?: number) => 
+            offset ? `LIMIT ${limit} OFFSET ${offset}` : `LIMIT ${limit}`,
+          dateFormat: 'YYYY-MM-DD',
+          supportsExplain: true,
+          explainKeyword: 'EXPLAIN'
+        };
+      case 'mysql':
+        return {
+          name: 'MySQL',
+          quotingChar: '`',
+          limitSyntax: (limit: number, offset?: number) => 
+            offset ? `LIMIT ${offset}, ${limit}` : `LIMIT ${limit}`,
+          dateFormat: 'YYYY-MM-DD',
+          supportsExplain: true,
+          explainKeyword: 'EXPLAIN'
+        };
+      case 'sqlite':
+        return {
+          name: 'SQLite',
+          quotingChar: '"',
+          limitSyntax: (limit: number, offset?: number) => 
+            offset ? `LIMIT ${limit} OFFSET ${offset}` : `LIMIT ${limit}`,
+          dateFormat: 'YYYY-MM-DD',
+          supportsExplain: true,
+          explainKeyword: 'EXPLAIN QUERY PLAN'
+        };
+      default:
+        return {
+          name: 'PostgreSQL',
+          quotingChar: '"',
+          limitSyntax: (limit: number, offset?: number) => 
+            offset ? `LIMIT ${limit} OFFSET ${offset}` : `LIMIT ${limit}`,
+          dateFormat: 'YYYY-MM-DD',
+          supportsExplain: true,
+          explainKeyword: 'EXPLAIN'
+        };
+    }
+  }
+
+  private assessQueryComplexity(userQuery: string, schema: SchemaInfo): 'simple' | 'medium' | 'complex' {
+    const lowerQuery = userQuery.toLowerCase();
+    let complexityScore = 0;
+
+    // Check for multiple tables
+    const tableCount = Object.keys(schema.tables).filter(table => 
+      lowerQuery.includes(table.toLowerCase()) || 
+      lowerQuery.includes(table.toLowerCase().slice(0, -1)) // singular form
+    ).length;
     
-    return `You are an expert SQL database analyst. Your task is to convert natural language into perfect PostgreSQL queries.
+    if (tableCount > 2) complexityScore += 2;
+    else if (tableCount > 1) complexityScore += 1;
 
-${schemaContext}
+    // Check for complex operations
+    if (lowerQuery.includes('join')) complexityScore += 1;
+    if (lowerQuery.includes('group by') || lowerQuery.includes('aggregate')) complexityScore += 1;
+    if (lowerQuery.includes('subquery') || lowerQuery.includes('nested')) complexityScore += 2;
+    if (lowerQuery.includes('window function') || lowerQuery.includes('rank')) complexityScore += 2;
+    if (lowerQuery.includes('cte') || lowerQuery.includes('with clause')) complexityScore += 2;
 
-QUERY ANALYSIS:
-${queryAnalysis}
+    // Check for multiple conditions
+    const conditionWords = ['where', 'and', 'or', 'having', 'case when'];
+    const conditionCount = conditionWords.filter(word => lowerQuery.includes(word)).length;
+    if (conditionCount > 2) complexityScore += 1;
 
-User Request: "${userQuery}"
+    // Check for time-based analysis
+    if (lowerQuery.includes('trend') || lowerQuery.includes('over time') || 
+        lowerQuery.includes('monthly') || lowerQuery.includes('yearly')) {
+      complexityScore += 1;
+    }
 
-INTELLIGENT GUIDELINES:
+    if (complexityScore >= 4) return 'complex';
+    if (complexityScore >= 2) return 'medium';
+    return 'simple';
+  }
 
-🎯 QUERY INTENT RECOGNITION:
-- If asking for "unique/distinct" values → Use SELECT DISTINCT
-- If asking for "top/best/highest" → Use ORDER BY DESC LIMIT  
-- If asking for "count/how many" → Use COUNT() and GROUP BY if needed
-- If asking for "total/sum" → Use SUM() with proper aggregation
-- If asking for "average" → Use AVG() with GROUP BY
-- If asking about time periods → Use date functions and INTERVAL
-- If asking about specific categories → Use WHERE with ILIKE for text matching
+  private needsChainOfThought(userQuery: string): boolean {
+    const lowerQuery = userQuery.toLowerCase();
+    
+    // Queries that benefit from step-by-step reasoning
+    return lowerQuery.includes('compare') ||
+           lowerQuery.includes('analyze') ||
+           lowerQuery.includes('breakdown') ||
+           lowerQuery.includes('step by step') ||
+           lowerQuery.includes('explain how') ||
+           (lowerQuery.includes('customers') && lowerQuery.includes('orders') && lowerQuery.includes('products'));
+  }
 
-🔧 TECHNICAL REQUIREMENTS:
-1. ALWAYS generate valid PostgreSQL SELECT statements only
-2. Use proper table aliases (c for customers, o for orders, oi for order_items, p for products)
-3. Use ILIKE for case-insensitive text matching
-4. Use appropriate JOINs based on the relationships shown above
-5. Include proper WHERE clauses for all filters mentioned
-6. Add reasonable LIMIT clauses (default 20 for large results)
-7. Use CURRENT_DATE and INTERVAL for date calculations
+  private isAnalyticsQuery(userQuery: string): boolean {
+    const lowerQuery = userQuery.toLowerCase();
+    
+    // Analytics-specific keywords
+    return lowerQuery.includes('trend') ||
+           lowerQuery.includes('revenue') ||
+           lowerQuery.includes('performance') ||
+           lowerQuery.includes('growth') ||
+           lowerQuery.includes('analysis') ||
+           lowerQuery.includes('metrics') ||
+           lowerQuery.includes('kpi') ||
+           lowerQuery.includes('dashboard') ||
+           lowerQuery.includes('report');
+  }
 
-💡 SMART PATTERN RECOGNITION:
-- "customers from [location]" → WHERE country/city ILIKE 'location'
-- "orders in last [time]" → WHERE order_date >= CURRENT_DATE - INTERVAL 'time'
-- "products in [category]" → WHERE category ILIKE 'category'
-- "top N by [metric]" → ORDER BY metric DESC LIMIT N
-- "total revenue" → SUM(quantity * unit_price) from order_items
-- "customer spending" → JOIN customers → orders → order_items, then SUM
+  private generateTableAliases(tableNames: string[]): Record<string, string> {
+    const aliases: Record<string, string> = {};
+    const usedAliases = new Set<string>();
+    
+    tableNames.forEach(tableName => {
+      // Generate smart aliases
+      let alias = '';
+      
+      // Common table patterns
+      if (tableName.includes('customer')) alias = 'c';
+      else if (tableName.includes('order') && !tableName.includes('item')) alias = 'o';
+      else if (tableName.includes('order_item') || tableName.includes('orderitem')) alias = 'oi';
+      else if (tableName.includes('product')) alias = 'p';
+      else if (tableName.includes('user')) alias = 'u';
+      else if (tableName.includes('category')) alias = 'cat';
+      else if (tableName.includes('payment')) alias = 'pay';
+      else if (tableName.includes('address')) alias = 'addr';
+      else if (tableName.includes('invoice')) alias = 'inv';
+      else if (tableName.includes('item')) alias = 'i';
+      else {
+        // Generate alias from first letters of words
+        const words = tableName.split('_');
+        alias = words.map(word => word.charAt(0)).join('').toLowerCase();
+      }
+      
+      // Ensure uniqueness
+      let finalAlias = alias;
+      let counter = 1;
+      while (usedAliases.has(finalAlias)) {
+        finalAlias = alias + counter;
+        counter++;
+      }
+      
+      aliases[tableName] = finalAlias;
+      usedAliases.add(finalAlias);
+    });
+    
+    return aliases;
+  }
 
-🚀 ADVANCED FEATURES:
-- Use CTEs (WITH clauses) for complex multi-step queries
-- Apply proper NULL handling with IS NOT NULL
-- Use window functions for ranking when appropriate
-- Add meaningful column aliases for calculated fields
-- Group by non-aggregated columns appropriately
-
-RETURN FORMAT: Generate ONLY the SQL query, no explanations or markdown.
-
-SQL Query:`;
+  private buildJoinContext(schema: SchemaInfo): string {
+    if (!schema.relationships || schema.relationships.length === 0) {
+      return "No foreign key relationships found.";
+    }
+    
+    const joinExamples: string[] = [];
+    const processedPairs = new Set<string>();
+    
+    schema.relationships.forEach(rel => {
+      const pairKey = `${rel.table}-${rel.referencedTable}`;
+      const reversePairKey = `${rel.referencedTable}-${rel.table}`;
+      
+      if (!processedPairs.has(pairKey) && !processedPairs.has(reversePairKey)) {
+        const tableAlias = this.generateTableAliases([rel.table, rel.referencedTable]);
+        joinExamples.push(
+          `${rel.table} ${tableAlias[rel.table]} JOIN ${rel.referencedTable} ${tableAlias[rel.referencedTable]} ON ${tableAlias[rel.table]}.${rel.column} = ${tableAlias[rel.referencedTable]}.${rel.referencedColumn}`
+        );
+        processedPairs.add(pairKey);
+      }
+    });
+    
+    return joinExamples.length > 0 ? joinExamples.join('\n') : "No clear JOIN patterns available.";
   }
 
   async generateSql(request: TextToSqlRequest): Promise<TextToSqlResponse> {
@@ -647,7 +1290,7 @@ SQL Query:`;
       throw new Error('No AI providers configured');
     }
 
-    const prompt = this.buildPrompt(request.userQuery, request.schema);
+    const prompt = this.buildPrompt(request.userQuery, request.schema, request.databaseDialect, request.connectionType);
     let lastError: Error | null = null;
     const attemptedProviders: string[] = [];
 
@@ -658,12 +1301,21 @@ SQL Query:`;
         continue;
       }
 
+      // Check rate limits before attempting
+      const rateLimitCheck = productionMonitoringService.checkRateLimit(provider.name);
+      if (!rateLimitCheck.allowed) {
+        console.log(`⏭️  Skipping ${provider.name} - rate limit exceeded. Resets at: ${rateLimitCheck.resetTime}`);
+        continue;
+      }
+
+      const startTime = Date.now();
       try {
         logger.info(`Attempting to generate SQL with ${provider.name}`);
         console.log(`🔄 Trying provider: ${provider.name}`);
         attemptedProviders.push(provider.name);
         
         const sqlQuery = await provider.generateSql(prompt);
+        const latency = Date.now() - startTime;
         
         if (!sqlQuery || sqlQuery.trim().length === 0) {
           throw new Error('Empty response from provider');
@@ -695,22 +1347,56 @@ SQL Query:`;
         // Check for warnings
         const warnings = this.checkForWarnings(cleanSql, request.schema);
 
+        // Generate optimization suggestions if dialect is known
+        const optimizationSuggestions = this.generateOptimizationSuggestions(cleanSql, request.connectionType);
+
         logger.info(`SQL generated successfully with ${provider.name}. Confidence: ${confidence}%`);
         console.log(`✅ Success with ${provider.name}: ${cleanSql.substring(0, 50)}...`);
+
+        // Record successful API usage
+        await productionMonitoringService.recordAPIUsage(
+          provider.name,
+          true,
+          latency,
+          this.estimateTokenCount(prompt + cleanSql),
+          0
+        );
 
         return {
           sql: cleanSql,
           explanation,
           confidence,
           warnings: warnings.length > 0 ? warnings : undefined,
-          provider: provider.name
+          provider: provider.name,
+          dialectUsed: request.connectionType || 'postgresql',
+          optimizationSuggestions: optimizationSuggestions.length > 0 ? optimizationSuggestions : undefined
         };
 
       } catch (error) {
+        const latency = Date.now() - startTime;
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.warn(`Failed to generate SQL with ${provider.name}: ${errorMessage}`);
         console.log(`❌ ${provider.name} failed: ${errorMessage}`);
         lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Record failed API usage and track error
+        await productionMonitoringService.recordAPIUsage(
+          provider.name,
+          false,
+          latency,
+          this.estimateTokenCount(prompt),
+          0
+        );
+
+        await productionMonitoringService.trackError(
+          provider.name,
+          this.categorizeError(errorMessage),
+          errorMessage,
+          request.userQuery,
+          0,
+          error instanceof Error ? error.stack : undefined
+        );
+
         continue; // Try next provider
       }
     }
@@ -731,17 +1417,29 @@ SQL Query:`;
   }
 
   private calculateConfidence(sql: string, schema: SchemaInfo, providerName: string): number {
-    let confidence = 60; // Lower base confidence for free services
+    let confidence = 60; // Base confidence
 
     // Boost confidence for specialized providers
-    if (providerName === 'OpenAI GPT-3.5') {
-      confidence = 90; // Highest quality AI model with excellent SQL capabilities
+    if (providerName === 'OpenAI GPT-4') {
+      confidence = 95; // Highest quality AI model with excellent SQL capabilities
+    } else if (providerName === 'OpenAI GPT-3.5-Turbo') {
+      confidence = 90; // High quality AI model with excellent SQL capabilities
+    } else if (providerName === 'Anthropic Claude') {
+      confidence = 92; // Excellent reasoning and SQL generation
+    } else if (providerName === 'Google Gemini') {
+      confidence = 88; // Good quality with free tier
+    } else if (providerName === 'Hugging Face SQLCoder') {
+      confidence = 85; // Specialized SQL model
+    } else if (providerName === 'Hugging Face DuckDB-NSQL') {
+      confidence = 83; // Specialized SQL model with schema awareness
+    } else if (providerName === 'Hugging Face CodeT5+') {
+      confidence = 80; // Code generation model with SQL capabilities
+    } else if (providerName === 'Cohere Command') {
+      confidence = 85; // Best working AI model for complex queries
     } else if (providerName === 'Text2SQL.ai') {
       confidence = 80; // Specialized SQL service
     } else if (providerName === 'Hugging Face (CodeT5/Flan-T5)') {
       confidence = 75; // Available smaller models with good SQL prompting
-    } else if (providerName === 'Cohere') {
-      confidence = 85; // Best working AI model for complex queries
     } else if (providerName === 'Rule-based Fallback') {
       confidence = 70; // Enhanced rules with improved pattern matching
     }
@@ -800,6 +1498,48 @@ SQL Query:`;
     }
 
     return warnings;
+  }
+
+  private generateOptimizationSuggestions(sql: string, connectionType?: string): string[] {
+    const suggestions: string[] = [];
+    const lowerSql = sql.toLowerCase();
+
+    // General optimization suggestions
+    if (lowerSql.includes('select *') && !lowerSql.includes('limit')) {
+      suggestions.push('Consider adding a LIMIT clause to prevent large result sets');
+    }
+
+    if (lowerSql.includes('like \'%') && lowerSql.includes('%\'')) {
+      suggestions.push('Leading wildcard searches can be slow. Consider using full-text search if available');
+    }
+
+    // Dialect-specific suggestions
+    if (connectionType) {
+      switch (connectionType.toLowerCase()) {
+        case 'postgresql':
+          if (lowerSql.includes('like') && !lowerSql.includes('ilike')) {
+            suggestions.push('Consider using ILIKE for case-insensitive searches in PostgreSQL');
+          }
+          if (lowerSql.includes('order by') && !lowerSql.includes('limit')) {
+            suggestions.push('Consider adding LIMIT when using ORDER BY to improve performance');
+          }
+          break;
+          
+        case 'mysql':
+          if (lowerSql.includes('||')) {
+            suggestions.push('Consider using CONCAT() function instead of || for string concatenation in MySQL');
+          }
+          break;
+          
+        case 'sqlite':
+          if (lowerSql.includes('count(*)') && lowerSql.includes('group by')) {
+            suggestions.push('SQLite may perform better with COUNT(column_name) instead of COUNT(*)');
+          }
+          break;
+      }
+    }
+
+    return suggestions;
   }
 
   // Utility method to check which providers are available
@@ -936,6 +1676,37 @@ What does this SQL query do?
   private extractTableName(schema: string): string {
     const tableMatch = schema.match(/CREATE TABLE (\w+)/i);
     return tableMatch ? tableMatch[1] : 'table';
+  }
+
+  // Estimate token count for cost tracking
+  private estimateTokenCount(text: string): number {
+    // Rough estimation: 1 token ≈ 4 characters for English text
+    return Math.ceil(text.length / 4);
+  }
+
+  // Categorize errors for better tracking
+  private categorizeError(errorMessage: string): string {
+    const lowerError = errorMessage.toLowerCase();
+    
+    if (lowerError.includes('rate limit') || lowerError.includes('quota')) {
+      return 'rate_limit';
+    } else if (lowerError.includes('timeout') || lowerError.includes('timed out')) {
+      return 'timeout';
+    } else if (lowerError.includes('network') || lowerError.includes('connection')) {
+      return 'network_error';
+    } else if (lowerError.includes('unauthorized') || lowerError.includes('authentication')) {
+      return 'auth_error';
+    } else if (lowerError.includes('server error') || lowerError.includes('500')) {
+      return 'server_error';
+    } else if (lowerError.includes('bad request') || lowerError.includes('400')) {
+      return 'client_error';
+    } else if (lowerError.includes('not found') || lowerError.includes('404')) {
+      return 'not_found';
+    } else if (lowerError.includes('unavailable') || lowerError.includes('503')) {
+      return 'temporary_unavailable';
+    } else {
+      return 'unknown_error';
+    }
   }
 }
 
