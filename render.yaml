@@ -3,14 +3,16 @@ services:
     name: talk-to-your-db
     env: node
     buildCommand: |
-      # Install backend dependencies
-      cd backend && npm install && npm run build && cd ..
-      # Install frontend dependencies and build
-      cd frontend && npm install && npm run build && cd ..
-      # Move frontend build to backend public folder
+      cd backend
+      npm install
+      npm run build
+      cd ../frontend
+      npm install
+      npm run build
+      cd ..
       mkdir -p backend/dist/public
       cp -r frontend/dist/* backend/dist/public/
-    startCommand: cd backend && node dist/index.js
+    startCommand: node backend/dist/index.js
     envVars:
       - key: NODE_ENV
         value: production
