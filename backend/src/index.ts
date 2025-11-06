@@ -41,7 +41,8 @@ app.use(helmet());
 const allowedOrigins = [
   'http://localhost:3000',
   'https://talk-to-your-db.onrender.com',
-  'https://talk-to-your-db-1.onrender.com'
+  'https://talk-to-your-db-1.onrender.com',
+  'https://talk-to-your-data-9kgm.onrender.com'
 ];
 
 if (process.env.FRONTEND_URL) {
