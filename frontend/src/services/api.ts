@@ -2,8 +2,12 @@ import axios from 'axios'
 
 // Configure API base URL
 const getBaseURL = () => {
-  // Always use the production backend URL
-  return 'https://talk-to-your-db.onrender.com/api'
+  // Use local development server when running locally
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3001/api'
+  }
+  // Use relative URL in production (same server serves frontend and backend)
+  return '/api'
 }
 
 // Configure axios defaults
@@ -74,6 +78,36 @@ export const textToSqlApi = {
   // Get list of tables
   getTables: async () => {
     const response = await api.get('/database/tables')
+    return response.data
+  },
+
+  // Visualization endpoints
+  suggestChart: async (queryResult: any, originalQuery?: string, sql?: string) => {
+    const response = await api.post('/visualization/suggest-chart', {
+      queryResult,
+      originalQuery,
+      sql
+    })
+    return response.data
+  },
+
+  generateDashboard: async (description: string, connectionId?: string) => {
+    const response = await api.post('/visualization/generate-dashboard', {
+      description,
+      connectionId
+    })
+    return response.data
+  },
+
+  getChartTypes: async () => {
+    const response = await api.get('/visualization/chart-types')
+    return response.data
+  },
+
+  analyzeData: async (queryResult: any) => {
+    const response = await api.post('/visualization/analyze-data', {
+      queryResult
+    })
     return response.data
   },
 }

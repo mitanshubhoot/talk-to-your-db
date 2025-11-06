@@ -5,12 +5,15 @@ dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
 import { createLogger, format, transports } from 'winston';
 import { textToSqlRouter } from './routes/textToSql';
 import { databaseRouter } from './routes/database';
 import { queryHistoryRouter } from './routes/queryHistory';
-import connectionsRouter from './routes/connections.js';
-import performanceRouter from './routes/performance.js';
+import connectionsRouter from './routes/connections';
+import performanceRouter from './routes/performance';
+import feedbackRouter from './routes/feedback';
+import { visualizationRouter } from './routes/visualization';
 
 // Create logger
 const logger = createLogger({
@@ -75,6 +78,21 @@ app.use('/api/database', databaseRouter);
 app.use('/api/history', queryHistoryRouter);
 app.use('/api/connections', connectionsRouter);
 app.use('/api/performance', performanceRouter);
+app.use('/api/feedback', feedbackRouter);
+app.use('/api/visualization', visualizationRouter);
+
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  const publicPath = path.join(__dirname, 'public');
+  app.use(express.static(publicPath));
+  
+  // Serve index.html for all non-API routes (SPA support)
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(publicPath, 'index.html'));
+    }
+  });
+}
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -88,11 +106,11 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
+// 404 handler for API routes only
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     error: {
-      message: 'Route not found'
+      message: 'API route not found'
     }
   });
 });
