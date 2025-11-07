@@ -84,7 +84,7 @@ app.use('/api/visualization', visualizationRouter);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  const publicPath = path.join(__dirname, 'public');
+  const publicPath = path.join(process.cwd(), 'public');
   app.use(express.static(publicPath));
   
   // Serve index.html for all non-API routes (SPA support)
