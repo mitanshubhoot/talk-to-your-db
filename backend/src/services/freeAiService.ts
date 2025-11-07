@@ -1,10 +1,10 @@
 import { createLogger, format, transports } from 'winston';
-import { SchemaInfo } from './database.js';
-import { OpenAIService } from './openai.js';
-import { AdvancedPromptTemplates, PromptTemplate } from './promptTemplates.js';
-import { dialectAwareService, DialectAwareRequest, DialectAwareService } from './dialectAwareService.js';
-import { DatabaseDialect } from '../types/database.js';
-import { productionMonitoringService } from './productionMonitoringService.js';
+import { SchemaInfo } from './database';
+import { OpenAIService } from './openai';
+import { AdvancedPromptTemplates, PromptTemplate } from './promptTemplates';
+import { dialectAwareService, DialectAwareRequest, DialectAwareService } from './dialectAwareService';
+import { DatabaseDialect } from '../types/database';
+import { productionMonitoringService } from './productionMonitoringService';
 
 const logger = createLogger({
   level: 'info',

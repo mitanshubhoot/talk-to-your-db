@@ -11,7 +11,7 @@ services:
       cd ..
       mkdir -p backend/public
       cp -r frontend/dist/* backend/public/
-    startCommand: cd backend && npx tsx src/index.ts
+    startCommand: cd backend && npx tsx --tsconfig tsconfig.json src/index.ts
     envVars:
       - key: NODE_ENV
         value: production
