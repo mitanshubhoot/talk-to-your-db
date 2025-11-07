@@ -1,10 +1,19 @@
 import { Pool, PoolConfig } from 'pg';
 import mysql from 'mysql2/promise';
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
 import fs from 'fs/promises';
 import path from 'path';
 import { DatabaseConnection, DatabaseConnectionConfig, SchemaComparison, SchemaDifference, DatabaseDialect } from '../types/database.js';
+
+// Optional sqlite imports
+let sqlite3: any;
+let sqliteOpen: any;
+try {
+  sqlite3 = require('sqlite3');
+  const sqliteModule = require('sqlite');
+  sqliteOpen = sqliteModule.open;
+} catch (e) {
+  console.warn('SQLite not available - SQLite connections will not work');
+}
 
 interface ConnectionPool {
   id: string;
@@ -152,10 +161,13 @@ export class ConnectionManager {
         });
 
       case 'sqlite':
+        if (!sqlite3 || !sqliteOpen) {
+          throw new Error('SQLite is not available in this environment');
+        }
         if (!connection.filepath) {
           throw new Error('SQLite filepath is required');
         }
-        return await open({
+        return await sqliteOpen({
           filename: connection.filepath,
           driver: sqlite3.Database
         });
