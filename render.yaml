@@ -5,13 +5,12 @@ services:
     buildCommand: |
       cd backend
       npm install --include=dev
-      npm run build || (echo "TypeScript build failed, copying source" && cp -r src/* dist/)
       cd ../frontend
       npm install
       npm run build
       cd ..
-      mkdir -p backend/dist/public
-      cp -r frontend/dist/* backend/dist/public/
+      mkdir -p backend/public
+      cp -r frontend/dist/* backend/public/
     startCommand: cd backend && npx tsx src/index.ts
     envVars:
       - key: NODE_ENV
