@@ -5,6 +5,7 @@ services:
     buildCommand: |
       cd backend
       npm install --include=dev
+      npm rebuild sqlite3
       cd ../frontend
       npm install
       npm run build
