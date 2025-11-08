@@ -430,6 +430,21 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
         </Typography>
       </Box>
 
+      {/* Demo Database Info Banner */}
+      <Alert 
+        severity="info" 
+        icon={<Info />}
+        sx={{ mb: 4 }}
+      >
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          <strong>Try without setup:</strong> Use our demo database to explore the app instantly!
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          The demo database contains sample e-commerce data (products, customers, orders). 
+          Perfect for testing queries and understanding how the app works before connecting your own database.
+        </Typography>
+      </Alert>
+
       {loadingConnections ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
           <CircularProgress />

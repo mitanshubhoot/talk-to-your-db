@@ -586,6 +586,34 @@ function App() {
         <Typography variant="h3" sx={{ mb: 2, fontWeight: 700 }}>
           Ready to explore your data?
         </Typography>
+        {!currentDatabase && !connectionLoading && (
+          <Alert 
+            severity="info" 
+            sx={{ 
+              maxWidth: 600, 
+              mx: 'auto', 
+              mt: 3,
+              '& .MuiAlert-message': {
+                width: '100%'
+              }
+            }}
+          >
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              <strong>New here?</strong> Try the app instantly with our demo database!
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              No setup required - explore sample e-commerce data and see how natural language queries work.
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => setCurrentView('databases')}
+              sx={{ mt: 1.5, borderColor: 'info.main', color: 'info.main' }}
+            >
+              View Demo Database →
+            </Button>
+          </Alert>
+        )}
       </Box>
 
       {/* Demo Mode Banner */}
@@ -1151,15 +1179,19 @@ function App() {
               background: 'linear-gradient(135deg, #1A1A1A 0%, #374151 100%)',
               border: '1px solid #4B5563'
             }}>
-              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                Connect your database to start querying your own data with AI.
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 500, fontSize: '0.8rem' }}>
+                No Database Connected
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1.5 }}>
+                Try our demo database or connect your own
               </Typography>
               <Button
                 size="small"
                 onClick={() => setCurrentView('databases')}
-                sx={{ color: 'primary.main', p: 0, fontSize: '0.875rem' }}
+                sx={{ color: 'primary.main', p: 0, fontSize: '0.75rem' }}
+                fullWidth
               >
-                Add Database →
+                View Databases →
               </Button>
             </Paper>
           )}
