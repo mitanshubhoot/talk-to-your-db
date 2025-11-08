@@ -41,3 +41,7 @@ pids
 backend/.env
 frontend/.env
 **/.env
+
+# Demo database credentials (if filled out)
+.kiro/specs/demo-database-setup/CREDENTIALS.md
+**/CREDENTIALS.md

@@ -27,6 +27,7 @@ export class ConnectionManager {
   private connections: Map<string, ConnectionPool> = new Map();
   private connectionsFilePath = path.join(process.cwd(), 'data', 'connections.json');
   private defaultConnectionId: string | null = null;
+  private demoConnectionIds: Set<string> = new Set();
 
   constructor() {
     this.ensureDataDirectory();
@@ -50,6 +51,10 @@ export class ConnectionManager {
       for (const conn of savedConnections) {
         if (conn.isDefault) {
           this.defaultConnectionId = conn.id;
+        }
+        // Restore demo connection IDs from metadata
+        if (conn.metadata?.isDemo) {
+          this.demoConnectionIds.add(conn.id);
         }
       }
     } catch (error) {
@@ -327,6 +332,25 @@ export class ConnectionManager {
     if (this.defaultConnectionId === connectionId) {
       this.defaultConnectionId = null;
     }
+  }
+
+  async setDefaultConnection(connectionId: string): Promise<DatabaseConnection> {
+    const connections = await this.getAllStoredConnections();
+    const connection = connections.find(c => c.id === connectionId);
+    
+    if (!connection) {
+      throw new Error(`Connection not found: ${connectionId}`);
+    }
+
+    // Unset all other defaults
+    connections.forEach(conn => {
+      conn.isDefault = conn.id === connectionId;
+    });
+
+    await this.saveConnections(connections);
+    this.defaultConnectionId = connectionId;
+
+    return connection;
   }
 
   async discoverSchema(connectionId: string): Promise<any> {
@@ -718,6 +742,212 @@ export class ConnectionManager {
           supportsExplain: false,
           explainKeyword: ''
         };
+    }
+  }
+
+  /**
+   * Check if any user connections exist (excluding demo connections)
+   */
+  async hasUserConnections(): Promise<boolean> {
+    const connections = await this.getAllStoredConnections();
+    const userConnections = connections.filter(conn => !this.demoConnectionIds.has(conn.id));
+    return userConnections.length > 0;
+  }
+
+  /**
+   * Mark a connection as a demo connection and add metadata
+   */
+  async markAsDemoConnection(connectionId: string, metadata?: any): Promise<void> {
+    this.demoConnectionIds.add(connectionId);
+    
+    // If metadata is provided, update the connection with it
+    if (metadata) {
+      const connections = await this.getAllStoredConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (connection) {
+        connection.metadata = metadata;
+        await this.saveConnections(connections);
+      }
+    }
+  }
+
+  /**
+   * Check if a connection is a demo connection
+   */
+  isDemoConnection(connectionId: string): boolean {
+    return this.demoConnectionIds.has(connectionId);
+  }
+
+  /**
+   * Get the demo connection if it exists
+   */
+  async getDemoConnection(): Promise<ConnectionPool | null> {
+    const connections = await this.getAllStoredConnections();
+    const demoConnection = connections.find(conn => this.demoConnectionIds.has(conn.id));
+    
+    if (demoConnection) {
+      return await this.getConnection(demoConnection.id);
+    }
+    
+    return null;
+  }
+
+  /**
+   * Auto-connect to demo database if no user connections exist
+   * This method should be called with a DemoConnectionService instance
+   */
+  async autoConnectDemo(demoService?: any): Promise<DatabaseConnection | null> {
+    // Check if user already has connections
+    const hasConnections = await this.hasUserConnections();
+    if (hasConnections) {
+      console.info('User connections exist - skipping demo auto-connect');
+      return null;
+    }
+
+    // Check if demo connection already exists
+    const demoConnection = await this.getDemoConnection();
+    if (demoConnection) {
+      console.info('Demo connection already exists');
+      return demoConnection.connection;
+    }
+
+    // If a demo service is provided, try to initialize the demo connection
+    if (demoService && typeof demoService.initializeDemoConnection === 'function') {
+      try {
+        const connection = await demoService.initializeDemoConnection();
+        if (connection) {
+          console.info('Demo connection auto-initialized successfully');
+          return connection;
+        }
+      } catch (error) {
+        console.error('Failed to auto-initialize demo connection:', error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Validate if a SQL query is allowed for a connection
+   * Returns an error message if the query is not allowed, null otherwise
+   * Logs blocked operations for monitoring
+   */
+  validateQueryForConnection(sql: string, connectionId: string): string | null {
+    // Check if this is a demo connection
+    if (!this.isDemoConnection(connectionId)) {
+      return null; // Not a demo connection, allow all queries
+    }
+
+    // Normalize SQL for checking (remove comments and extra whitespace)
+    const normalizedSql = sql
+      .replace(/--.*$/gm, '') // Remove single-line comments
+      .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+      .trim()
+      .toUpperCase();
+
+    // Check for write operations (INSERT, UPDATE, DELETE)
+    const writeOperations = ['INSERT', 'UPDATE', 'DELETE'];
+    for (const operation of writeOperations) {
+      if (normalizedSql.startsWith(operation)) {
+        const errorMessage = `Demo database is read-only. ${operation} operations are not allowed. Connect your own database to modify data.`;
+        this.logBlockedOperation(connectionId, operation, sql);
+        return errorMessage;
+      }
+    }
+
+    // Check for DDL statements (CREATE, DROP, ALTER, TRUNCATE, RENAME)
+    const ddlOperations = ['CREATE', 'DROP', 'ALTER', 'TRUNCATE', 'RENAME'];
+    for (const operation of ddlOperations) {
+      if (normalizedSql.startsWith(operation)) {
+        const errorMessage = `Demo database is read-only. ${operation} operations are not allowed. Connect your own database to modify the schema.`;
+        this.logBlockedOperation(connectionId, operation, sql);
+        return errorMessage;
+      }
+    }
+
+    // Check for other potentially dangerous operations
+    const dangerousOperations = ['GRANT', 'REVOKE', 'EXECUTE', 'CALL'];
+    for (const operation of dangerousOperations) {
+      if (normalizedSql.startsWith(operation)) {
+        const errorMessage = `Demo database is read-only. ${operation} operations are not allowed.`;
+        this.logBlockedOperation(connectionId, operation, sql);
+        return errorMessage;
+      }
+    }
+
+    return null; // Query is allowed
+  }
+
+  /**
+   * Log blocked operations for monitoring
+   */
+  private logBlockedOperation(connectionId: string, operation: string, sql: string): void {
+    const timestamp = new Date().toISOString();
+    const truncatedSql = sql.length > 100 ? sql.substring(0, 100) + '...' : sql;
+    
+    console.warn(
+      `[DEMO_WRITE_BLOCKED] ${timestamp} - Connection: ${connectionId}, ` +
+      `Operation: ${operation}, SQL: ${truncatedSql}`
+    );
+  }
+
+  /**
+   * Execute a query with read-only enforcement for demo connections
+   * Intercepts write operations before execution and provides user-friendly error messages
+   */
+  async executeQueryWithValidation(connectionId: string, sql: string): Promise<any> {
+    // Validate the query before execution
+    const validationError = this.validateQueryForConnection(sql, connectionId);
+    if (validationError) {
+      // Throw a user-friendly error that will be caught by the route handler
+      const error = new Error(validationError);
+      error.name = 'ValidationError';
+      throw error;
+    }
+
+    // Get the connection and execute the query
+    const connectionPool = await this.getConnection(connectionId);
+    const { pool, type } = connectionPool;
+
+    try {
+      switch (type) {
+        case 'postgresql':
+          const pgResult = await pool.query(sql);
+          return {
+            rows: pgResult.rows,
+            rowCount: pgResult.rowCount,
+            fields: pgResult.fields
+          };
+        
+        case 'mysql':
+          const [mysqlRows, mysqlFields] = await pool.execute(sql);
+          return {
+            rows: mysqlRows,
+            rowCount: Array.isArray(mysqlRows) ? mysqlRows.length : 0,
+            fields: mysqlFields
+          };
+        
+        case 'sqlite':
+          const sqliteRows = await pool.all(sql);
+          return {
+            rows: sqliteRows,
+            rowCount: sqliteRows.length,
+            fields: sqliteRows.length > 0 ? Object.keys(sqliteRows[0]).map(name => ({ name })) : []
+          };
+        
+        default:
+          throw new Error(`Query execution not implemented for ${type}`);
+      }
+    } catch (error) {
+      // Re-throw validation errors as-is
+      if (error instanceof Error && error.name === 'ValidationError') {
+        throw error;
+      }
+      
+      // Wrap other errors with context
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Query execution failed: ${errorMessage}`);
     }
   }
 } 

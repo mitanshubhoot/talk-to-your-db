@@ -14,6 +14,7 @@ import connectionsRouter from './routes/connections';
 import performanceRouter from './routes/performance';
 import feedbackRouter from './routes/feedback';
 import { visualizationRouter } from './routes/visualization';
+import demoRouter from './routes/demo';
 
 // Create logger
 const logger = createLogger({
@@ -81,6 +82,7 @@ app.use('/api/connections', connectionsRouter);
 app.use('/api/performance', performanceRouter);
 app.use('/api/feedback', feedbackRouter);
 app.use('/api/visualization', visualizationRouter);
+app.use('/api/demo', demoRouter);
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {

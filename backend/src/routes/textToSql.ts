@@ -42,32 +42,8 @@ async function getDatabaseService(connectionId?: string) {
       connectionPool,
       discoverSchema: () => connectionManager.discoverSchema(connectionId),
       executeQuery: async (sql: string) => {
-        const { pool, type } = connectionPool;
-        switch (type) {
-          case 'postgresql':
-            const pgResult = await pool.query(sql);
-            return {
-              rows: pgResult.rows,
-              rowCount: pgResult.rowCount,
-              fields: pgResult.fields
-            };
-          case 'mysql':
-            const [mysqlRows, mysqlFields] = await pool.execute(sql);
-            return {
-              rows: mysqlRows,
-              rowCount: Array.isArray(mysqlRows) ? mysqlRows.length : 0,
-              fields: mysqlFields
-            };
-          case 'sqlite':
-            const sqliteRows = await pool.all(sql);
-            return {
-              rows: sqliteRows,
-              rowCount: sqliteRows.length,
-              fields: sqliteRows.length > 0 ? Object.keys(sqliteRows[0]).map(name => ({ name })) : []
-            };
-          default:
-            throw new Error(`Query execution not implemented for ${type}`);
-        }
+        // Use the ConnectionManager's validation and execution method
+        return await connectionManager.executeQueryWithValidation(connectionId!, sql);
       }
     };
   } else {

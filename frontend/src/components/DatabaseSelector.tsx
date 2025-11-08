@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -14,6 +14,15 @@ import {
   FormControlLabel,
   Switch,
   Alert,
+  Chip,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider,
 } from '@mui/material'
 import {
   Storage,
@@ -28,6 +37,11 @@ import {
   CloudQueue,
   Apartment,
   Category,
+  Delete,
+  CheckCircle,
+  Add,
+  ArrowBack,
+  Info,
 } from '@mui/icons-material'
 
 interface DatabaseType {
@@ -127,6 +141,21 @@ const databaseTypes: DatabaseType[] = [
 
 const steps = ['Select Type', 'Configure', 'Connect']
 
+interface DatabaseConnection {
+  id: string
+  name: string
+  type: string
+  database: string
+  host?: string
+  port?: number
+  isDefault?: boolean
+  metadata?: {
+    isDemo?: boolean
+    readOnly?: boolean
+    demoVersion?: string
+  }
+}
+
 interface DatabaseSelectorProps {
   onConnectionCreated?: (connectionId: string) => void
 }
@@ -134,6 +163,9 @@ interface DatabaseSelectorProps {
 export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
   onConnectionCreated,
 }) => {
+  const [view, setView] = useState<'list' | 'create'>('list')
+  const [connections, setConnections] = useState<DatabaseConnection[]>([])
+  const [loadingConnections, setLoadingConnections] = useState(true)
   const [activeStep, setActiveStep] = useState(0)
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [connectionForm, setConnectionForm] = useState({
@@ -163,6 +195,64 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
   })
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadConnections()
+  }, [])
+
+  const loadConnections = async () => {
+    setLoadingConnections(true)
+    try {
+      const api = (await import('../services/api')).default
+      const response = await api.get('/connections')
+      if (response.data.success) {
+        setConnections(response.data.data)
+      }
+    } catch (err) {
+      console.error('Failed to load connections:', err)
+    } finally {
+      setLoadingConnections(false)
+    }
+  }
+
+  const handleDeleteConnection = async (connectionId: string, isDemo: boolean) => {
+    if (isDemo) {
+      // Don't allow deletion of demo connection
+      return
+    }
+
+    if (!window.confirm('Are you sure you want to delete this connection?')) {
+      return
+    }
+
+    try {
+      const api = (await import('../services/api')).default
+      await api.delete(`/connections/${connectionId}`)
+      await loadConnections()
+    } catch (err) {
+      console.error('Failed to delete connection:', err)
+      setError('Failed to delete connection')
+    }
+  }
+
+  const handleSwitchConnection = async (connectionId: string) => {
+    try {
+      const api = (await import('../services/api')).default
+      // Set as default connection
+      await api.post(`/connections/${connectionId}/set-default`)
+      
+      // Reload connections to reflect the change
+      await loadConnections()
+      
+      // Notify parent and reload
+      if (onConnectionCreated) {
+        onConnectionCreated(connectionId)
+      }
+    } catch (err) {
+      console.error('Failed to switch connection:', err)
+      setError('Failed to switch connection')
+    }
+  }
 
   const handleTypeSelect = (typeId: string) => {
     setSelectedType(typeId)
@@ -294,6 +384,9 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
       
       console.log('Connection created successfully:', createResponse.data.data)
       
+      // Reload connections list
+      await loadConnections()
+      
       // Show success step
       setActiveStep(2)
       if (onConnectionCreated) {
@@ -326,8 +419,195 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
     }
   }
 
+  const renderConnectionsList = () => (
+    <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
+      <Box sx={{ textAlign: 'center', mb: 6 }}>
+        <Typography variant="h4" sx={{ mb: 2 }}>
+          Database Connections
+        </Typography>
+        <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+          Manage your database connections
+        </Typography>
+      </Box>
+
+      {loadingConnections ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          {connections.length > 0 && (
+            <Paper sx={{ mb: 4, border: '1px solid #374151' }}>
+              <List>
+                {connections.map((connection, index) => {
+                  const isDemo = connection.metadata?.isDemo === true
+                  const isReadOnly = connection.metadata?.readOnly === true
+                  
+                  return (
+                    <React.Fragment key={connection.id}>
+                      {index > 0 && <Divider />}
+                      <ListItem
+                        sx={{
+                          py: 2,
+                          px: 3,
+                          '&:hover': {
+                            bgcolor: 'rgba(59, 130, 246, 0.05)'
+                          }
+                        }}
+                      >
+                        <ListItemIcon>
+                          <Storage sx={{ color: 'primary.main', fontSize: 32 }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Typography variant="h6" sx={{ fontWeight: 500 }}>
+                                {connection.name}
+                              </Typography>
+                              {isDemo && (
+                                <Chip
+                                  label="Demo Database"
+                                  size="small"
+                                  sx={{
+                                    bgcolor: 'primary.main',
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    fontSize: '0.75rem'
+                                  }}
+                                />
+                              )}
+                              {isReadOnly && (
+                                <Chip
+                                  label="Read-Only"
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{
+                                    borderColor: 'warning.main',
+                                    color: 'warning.main',
+                                    fontSize: '0.75rem'
+                                  }}
+                                />
+                              )}
+                              {connection.isDefault && (
+                                <Chip
+                                  label="Active"
+                                  size="small"
+                                  icon={<CheckCircle sx={{ fontSize: 14 }} />}
+                                  sx={{
+                                    bgcolor: 'success.main',
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    fontSize: '0.75rem'
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          }
+                          secondary={
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                {connection.type.toUpperCase()} • {connection.database}
+                              </Typography>
+                              {connection.host && (
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                  {connection.host}:{connection.port}
+                                </Typography>
+                              )}
+                              {isDemo && (
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic', display: 'block', mt: 0.5 }}>
+                                  This is a demo database with sample data. Connect your own database to work with real data.
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          {!connection.isDefault && (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleSwitchConnection(connection.id)}
+                              sx={{ borderColor: '#374151' }}
+                            >
+                              Switch To
+                            </Button>
+                          )}
+                          {!isDemo && (
+                            <Tooltip title="Delete Connection">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteConnection(connection.id, isDemo)}
+                                sx={{ color: 'error.main' }}
+                              >
+                                <Delete />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {isDemo && (
+                            <Tooltip title="Demo connections cannot be deleted">
+                              <IconButton
+                                size="small"
+                                disabled
+                                sx={{ color: 'text.disabled' }}
+                              >
+                                <Info />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </ListItem>
+                    </React.Fragment>
+                  )
+                })}
+              </List>
+            </Paper>
+          )}
+
+          {connections.length === 0 && (
+            <Paper sx={{ p: 6, textAlign: 'center', border: '1px solid #374151', mb: 4 }}>
+              <Storage sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                No Connections Yet
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+                Add your first database connection to get started
+              </Typography>
+            </Paper>
+          )}
+
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<Add />}
+              onClick={() => {
+                setView('create')
+                setActiveStep(0)
+                setSelectedType(null)
+                setError(null)
+              }}
+              sx={{ px: 4, py: 1.5 }}
+            >
+              Add New Connection
+            </Button>
+          </Box>
+        </>
+      )}
+    </Box>
+  )
+
   const renderTypeSelection = () => (
     <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
+      <Box sx={{ mb: 4 }}>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => setView('list')}
+          sx={{ color: 'text.secondary' }}
+        >
+          Back to Connections
+        </Button>
+      </Box>
+      
       <Box sx={{ textAlign: 'center', mb: 6 }}>
         <Typography variant="h4" sx={{ mb: 2 }}>
           Add your database
@@ -397,6 +677,16 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
     
     return (
       <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+        <Box sx={{ mb: 4 }}>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => setView('list')}
+            sx={{ color: 'text.secondary' }}
+          >
+            Back to Connections
+          </Button>
+        </Box>
+        
         <Box sx={{ textAlign: 'center', mb: 6 }}>
           <Typography variant="h4" sx={{ mb: 2 }}>
             Configure {selectedTypeData?.name}
@@ -734,7 +1024,7 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
       
       <Paper sx={{ p: 4, border: '1px solid #374151' }}>
         <Box sx={{ color: 'success.main', mb: 2 }}>
-          <Storage sx={{ fontSize: 48 }} />
+          <CheckCircle sx={{ fontSize: 48 }} />
         </Box>
         <Typography variant="h6" sx={{ mb: 2 }}>
           {connectionForm.name}
@@ -743,22 +1033,39 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
           Your database connection has been established successfully. You can now start querying your data with AI.
         </Typography>
         
-        <Button
-          variant="contained"
-          onClick={() => window.location.reload()}
-          sx={{ px: 4 }}
-        >
-          Start Querying
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setView('list')
+              setActiveStep(0)
+            }}
+            sx={{ px: 4, borderColor: '#374151' }}
+          >
+            View Connections
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => window.location.reload()}
+            sx={{ px: 4 }}
+          >
+            Start Querying
+          </Button>
+        </Box>
       </Paper>
     </Box>
   )
 
   return (
     <Box sx={{ p: 4, minHeight: '100vh', bgcolor: 'background.default' }}>
-      {activeStep === 0 && renderTypeSelection()}
-      {activeStep === 1 && renderConnectionForm()}
-      {activeStep === 2 && renderSuccess()}
+      {view === 'list' && renderConnectionsList()}
+      {view === 'create' && (
+        <>
+          {activeStep === 0 && renderTypeSelection()}
+          {activeStep === 1 && renderConnectionForm()}
+          {activeStep === 2 && renderSuccess()}
+        </>
+      )}
     </Box>
   )
 } 

@@ -53,6 +53,8 @@ import { DatabaseSelector } from './components/DatabaseSelector'
 import { ResultsTable } from './components/ResultsTable'
 import { ChartRecommendationComponent } from './components/ChartRecommendation'
 import { DashboardGenerator } from './components/DashboardGenerator'
+import { DemoModeBanner } from './components/DemoModeBanner'
+import { ExampleQueries } from './components/ExampleQueries'
 
 const DRAWER_WIDTH = 280
 
@@ -117,6 +119,9 @@ function App() {
   const [profileUpdateSuccess, setProfileUpdateSuccess] = useState(false)
   const [connectionLoading, setConnectionLoading] = useState(false)
   
+  // Demo mode state
+  const [isDemoMode, setIsDemoMode] = useState(false)
+  
   // Optimization state
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null)
   const [optimizationLoading, setOptimizationLoading] = useState(false)
@@ -124,8 +129,8 @@ function App() {
 
   useEffect(() => {
     const initializeApp = async () => {
-      // Load current database directly without testing connection
-      await loadCurrentDatabase()
+      // Check for demo mode and auto-connect if needed
+      await checkDemoModeAndAutoConnect()
     }
     initializeApp()
   }, [])
@@ -137,11 +142,16 @@ function App() {
       const response = await api.get('/connections/current')
       if (response.data.success && response.data.data) {
         // Backend has verified connection - safe to display as connected
+        const dbData = response.data.data
         setCurrentDatabase({
-          ...response.data.data,
+          ...dbData,
           isConnected: true,
           lastConnected: new Date().toISOString()
         })
+        
+        // Check if this is a demo connection
+        const isDemo = dbData.metadata?.isDemo === true
+        setIsDemoMode(isDemo)
         return
       }
     } catch (error: any) {
@@ -158,6 +168,83 @@ function App() {
     
     // No valid connection - show disconnected state
     setCurrentDatabase(null)
+    setIsDemoMode(false)
+  }
+
+  const checkDemoModeAndAutoConnect = async () => {
+    setConnectionLoading(true)
+    try {
+      // First, check if there's an existing connection
+      const currentResponse = await api.get('/connections/current')
+      if (currentResponse.data.success && currentResponse.data.data) {
+        // We have a connection, load it
+        const dbData = currentResponse.data.data
+        setCurrentDatabase({
+          ...dbData,
+          isConnected: true,
+          lastConnected: new Date().toISOString()
+        })
+        
+        // Check if this is a demo connection
+        const isDemo = dbData.metadata?.isDemo === true
+        setIsDemoMode(isDemo)
+        setConnectionLoading(false)
+        return
+      }
+    } catch (error: any) {
+      // No current connection, continue to check demo mode
+      console.log('No current connection found, checking demo mode...')
+    }
+
+    // No existing connection, check if demo mode should be activated
+    try {
+      const demoResponse = await api.get('/demo/status')
+      if (demoResponse.data.success && demoResponse.data.data) {
+        const demoData = demoResponse.data.data
+        
+        if (demoData.isActive && demoData.connection) {
+          // Demo is active and connected, set it as current database
+          setCurrentDatabase({
+            ...demoData.connection,
+            isConnected: true,
+            lastConnected: new Date().toISOString(),
+            metadata: demoData.metadata
+          })
+          setIsDemoMode(true)
+          console.log('Auto-connected to demo database')
+        } else if (demoData.isConfigured && !demoData.isActive) {
+          // Demo is configured but not connected, try to initialize it
+          try {
+            const initResponse = await api.post('/demo/initialize')
+            if (initResponse.data.success && initResponse.data.data.connection) {
+              const connection = initResponse.data.data.connection
+              setCurrentDatabase({
+                ...connection,
+                isConnected: true,
+                lastConnected: new Date().toISOString(),
+                metadata: initResponse.data.data.metadata
+              })
+              setIsDemoMode(true)
+              console.log('Demo database initialized and connected')
+            }
+          } catch (initError) {
+            console.log('Failed to initialize demo database:', initError)
+            // Fall through to show no connection state
+          }
+        }
+      }
+    } catch (error: any) {
+      // Demo mode not available or failed, this is okay
+      console.log('Demo mode not available:', error.message || error)
+    } finally {
+      setConnectionLoading(false)
+    }
+    
+    // If we get here and still no connection, show disconnected state
+    if (!currentDatabase) {
+      setCurrentDatabase(null)
+      setIsDemoMode(false)
+    }
   }
 
   const handleNavToggle = (itemId: string) => {
@@ -418,9 +505,24 @@ function App() {
               <Storage sx={{ color: 'primary.main' }} />
             </Badge>
             <Box>
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                {currentDatabase.name}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {currentDatabase.name}
+                </Typography>
+                {isDemoMode && (
+                  <Chip
+                    label="Demo Mode"
+                    size="small"
+                    sx={{
+                      bgcolor: 'primary.main',
+                      color: 'white',
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      height: 20
+                    }}
+                  />
+                )}
+              </Box>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 {currentDatabase.type.toUpperCase()} • {currentDatabase.database}
               </Typography>
@@ -462,7 +564,9 @@ function App() {
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} />
-              <Typography variant="body2">Connected</Typography>
+              <Typography variant="body2">
+                {isDemoMode ? 'Demo Connected' : 'Connected'}
+              </Typography>
             </Box>
           </Grid>
         </Grid>
@@ -478,6 +582,14 @@ function App() {
           Ready to explore your data?
         </Typography>
       </Box>
+
+      {/* Demo Mode Banner */}
+      {isDemoMode && (
+        <DemoModeBanner
+          onConnectDatabase={() => setCurrentView('databases')}
+          onViewExamples={() => setCurrentView('templates')}
+        />
+      )}
 
       {/* Database Status */}
       {renderDatabaseStatus()}
@@ -869,38 +981,13 @@ function App() {
         )
       case 'templates':
         return (
-          <Box sx={{ maxWidth: 800, mx: 'auto', p: 4 }}>
-            <Typography variant="h4" sx={{ mb: 4 }}>Templates</Typography>
-            <Grid container spacing={3}>
-              {[
-                'Show top customers by revenue',
-                'Find products with low inventory',
-                'Calculate monthly sales growth',
-                'List recent orders by customer'
-              ].map((template, index) => (
-                <Grid item xs={12} md={6} key={index}>
-                  <Card 
-                    sx={{ 
-                      cursor: 'pointer', 
-                      border: '1px solid #374151',
-                      '&:hover': { 
-                        borderColor: '#3B82F6',
-                        backgroundColor: '#1A1A1A'
-                      }
-                    }}
-                    onClick={() => {
-                      setUserQuery(template)
-                      setCurrentView('main')
-                    }}
-                  >
-                    <CardContent>
-                      <Typography variant="body1">{template}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
+          <ExampleQueries
+            onQuerySelect={(query) => {
+              setUserQuery(query)
+              setCurrentView('main')
+            }}
+            isDemoMode={isDemoMode}
+          />
         )
       case 'dashboards':
         return (
@@ -1018,9 +1105,27 @@ function App() {
                   <Storage sx={{ color: 'primary.main', fontSize: 20 }} />
                 </Badge>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem' }}>
-                    {currentDatabase.name}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                      {currentDatabase.name}
+                    </Typography>
+                    {isDemoMode && (
+                      <Chip
+                        label="Demo"
+                        size="small"
+                        sx={{
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          fontWeight: 600,
+                          fontSize: '0.65rem',
+                          height: 16,
+                          '& .MuiChip-label': {
+                            px: 0.75
+                          }
+                        }}
+                      />
+                    )}
+                  </Box>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                     {currentDatabase.database}
                   </Typography>

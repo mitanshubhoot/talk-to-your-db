@@ -15,9 +15,9 @@ const router = Router();
 const saveQuerySchema = z.object({
   query: z.string().min(1, 'Query cannot be empty'),
   sql: z.string().min(1, 'SQL cannot be empty'),
-  explanation: z.string(),
-  confidence: z.number().min(0).max(100),
-  provider: z.string(),
+  explanation: z.string().default(''),
+  confidence: z.number().min(0).max(100).default(0),
+  provider: z.string().default('unknown'),
   executionTime: z.number().optional(),
   resultCount: z.number().optional(),
 });
@@ -41,7 +41,7 @@ router.post('/save', async (req: Request, res: Response) => {
     
     logger.info(`Saving query to history: "${queryData.query.substring(0, 50)}..."`);
     
-    const savedItem = await queryHistoryService.saveQuery(queryData);
+    const savedItem = await queryHistoryService.saveQuery(queryData as Omit<import('../services/queryHistory').QueryHistoryItem, 'id' | 'timestamp' | 'favorite'>);
     
     res.json({
       success: true,

@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "name": "Demo Database",
+    "type": "postgresql",
+    "host": "ep-solitary-resonance-af0ht5lv.c-2.us-west-2.aws.neon.tech",
+    "port": 5432,
+    "database": "neondb",
+    "username": "demo_readonly",
+    "password": "DemoReadOnly2024",
+    "ssl": true,
+    "isDefault": false,
+    "id": "conn_1762564677532_qwwf8pyxa",
+    "createdAt": "2025-11-08T01:17:57.532Z",
+    "updatedAt": "2025-11-08T01:17:57.532Z"
+  }
+]

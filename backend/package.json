@@ -11,6 +11,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:e2e": "jest --testPathPattern=e2e",
+    "test:demo-connection": "tsx --require dotenv/config src/scripts/testDemoConnection.ts",
     "evaluate-apis": "tsx --require dotenv/config src/scripts/evaluateAPIs.ts"
   },
   "dependencies": {

@@ -189,6 +189,28 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Set connection as default
+router.post('/:id/set-default', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const connection = await connectionManager.setDefaultConnection(id);
+    
+    res.json({
+      success: true,
+      data: {
+        ...connection,
+        password: undefined // Don't expose password
+      }
+    });
+  } catch (error) {
+    console.error('Error setting default connection:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: error instanceof Error ? error.message : 'Failed to set default connection' }
+    });
+  }
+});
+
 // Get schema for connection
 router.get('/:id/schema', async (req, res) => {
   try {
@@ -250,44 +272,9 @@ router.post('/:id/execute', async (req, res) => {
       });
     }
 
-    const connectionPool = await connectionManager.getConnection(id);
-    const { pool, type } = connectionPool;
-    
+    // Use executeQueryWithValidation to enforce read-only for demo connections
     const startTime = Date.now();
-    let result: any;
-    
-    switch (type) {
-      case 'postgresql':
-        const pgResult = await pool.query(sql);
-        result = {
-          rows: pgResult.rows,
-          rowCount: pgResult.rowCount,
-          fields: pgResult.fields
-        };
-        break;
-      
-      case 'mysql':
-        const [mysqlRows, mysqlFields] = await pool.execute(sql);
-        result = {
-          rows: mysqlRows,
-          rowCount: Array.isArray(mysqlRows) ? mysqlRows.length : 0,
-          fields: mysqlFields
-        };
-        break;
-      
-      case 'sqlite':
-        const sqliteRows = await pool.all(sql);
-        result = {
-          rows: sqliteRows,
-          rowCount: sqliteRows.length,
-          fields: sqliteRows.length > 0 ? Object.keys(sqliteRows[0]).map(name => ({ name })) : []
-        };
-        break;
-      
-      default:
-        throw new Error(`Query execution not implemented for ${type}`);
-    }
-    
+    const result = await connectionManager.executeQueryWithValidation(id, sql);
     const executionTime = Date.now() - startTime;
     
     // Record performance
@@ -309,9 +296,18 @@ router.post('/:id/execute', async (req, res) => {
     });
   } catch (error) {
     console.error('Error executing query:', error);
-    res.status(500).json({
+    
+    // Check if this is a validation error (write operation blocked)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to execute query';
+    const isValidationError = errorMessage.includes('read-only') || 
+                              errorMessage.includes('not allowed');
+    
+    res.status(isValidationError ? 403 : 500).json({
       success: false,
-      error: { message: error instanceof Error ? error.message : 'Failed to execute query' }
+      error: { 
+        message: errorMessage,
+        code: isValidationError ? 'WRITE_OPERATION_BLOCKED' : 'QUERY_EXECUTION_ERROR'
+      }
     });
   }
 });

@@ -27,11 +27,20 @@ export interface DatabaseConnectionConfig {
   isDefault?: boolean;
 }
 
+export interface DemoConnectionMetadata {
+  isDemo: boolean;
+  demoVersion: string;
+  sampleDataDate: string;
+  readOnly: boolean;
+  exampleQueries: string[];
+}
+
 export interface DatabaseConnection extends DatabaseConnectionConfig {
   id: string;
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
+  metadata?: DemoConnectionMetadata;
 }
 
 export interface QueryPerformance {
