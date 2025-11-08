@@ -303,7 +303,22 @@ INSERT INTO orders (customer_id, order_date, total_amount, status, shipping_addr
 (32, CURRENT_TIMESTAMP - INTERVAL '35 days', 169.99, 'delivered', '468 Ironwood Ave, Kansas City, MO 64101'),
 (33, CURRENT_TIMESTAMP - INTERVAL '30 days', 399.97, 'delivered', '579 Basswood St, Mesa, AZ 85201'),
 (34, CURRENT_TIMESTAMP - INTERVAL '25 days', 229.99, 'delivered', '681 Boxwood Dr, Atlanta, GA 30301'),
-(35, CURRENT_TIMESTAMP - INTERVAL '15 days', 149.99, 'shipped', '792 Buckeye Ln, Omaha, NE 68101');
+(35, CURRENT_TIMESTAMP - INTERVAL '15 days', 149.99, 'shipped', '792 Buckeye Ln, Omaha, NE 68101'),
+(1, CURRENT_TIMESTAMP - INTERVAL '13 days', 189.99, 'shipped', '123 Main St, New York, NY 10001'),
+(2, CURRENT_TIMESTAMP - INTERVAL '11 days', 149.97, 'processing', '456 Oak Ave, Los Angeles, CA 90001'),
+(3, CURRENT_TIMESTAMP - INTERVAL '9 days', 79.99, 'processing', '789 Pine Rd, Chicago, IL 60601'),
+(4, CURRENT_TIMESTAMP - INTERVAL '7 days', 299.98, 'processing', '321 Elm St, Houston, TX 77001'),
+(5, CURRENT_TIMESTAMP - INTERVAL '5 days', 149.99, 'pending', '654 Maple Dr, Phoenix, AZ 85001'),
+(6, CURRENT_TIMESTAMP - INTERVAL '3 days', 679.97, 'pending', '987 Cedar Ln, Philadelphia, PA 19019'),
+(7, CURRENT_TIMESTAMP - INTERVAL '2 days', 119.99, 'pending', '147 Birch Ct, San Antonio, TX 78201'),
+(8, CURRENT_TIMESTAMP - INTERVAL '1 day', 319.96, 'pending', '258 Spruce Way, San Diego, CA 92101'),
+(9, CURRENT_TIMESTAMP - INTERVAL '18 hours', 209.99, 'pending', '369 Willow Pl, Dallas, TX 75201'),
+(10, CURRENT_TIMESTAMP - INTERVAL '12 hours', 139.99, 'pending', '741 Ash Blvd, San Jose, CA 95101'),
+(11, CURRENT_TIMESTAMP - INTERVAL '8 hours', 289.97, 'pending', '852 Palm Ave, Austin, TX 78701'),
+(12, CURRENT_TIMESTAMP - INTERVAL '6 hours', 179.98, 'pending', '963 Fir St, Jacksonville, FL 32099'),
+(13, CURRENT_TIMESTAMP - INTERVAL '4 hours', 669.97, 'pending', '159 Poplar Dr, Fort Worth, TX 76101'),
+(14, CURRENT_TIMESTAMP - INTERVAL '2 hours', 199.99, 'pending', '357 Hickory Ln, Columbus, OH 43085'),
+(15, CURRENT_TIMESTAMP - INTERVAL '1 hour', 149.99, 'pending', '486 Walnut Rd, Charlotte, NC 28201');
 
 
 -- ============================================================================
