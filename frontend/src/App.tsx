@@ -267,14 +267,19 @@ function App() {
     setResult(null)
 
     try {
-      const response = await api.post('/text-to-sql/generate-and-execute', { query: userQuery })
+      const response = await api.post('/text-to-sql/generate-and-execute', { 
+        query: userQuery,
+        connectionId: currentDatabase?.id 
+      })
       if (response.data.success) {
         setResult(response.data.data)
       } else {
         setError(response.data.error?.message || 'Failed to generate SQL')
       }
-    } catch (err) {
-      setError('Failed to generate SQL. Please check your connection.')
+    } catch (err: any) {
+      console.error('SQL Generation Error:', err);
+      const errorMessage = err.response?.data?.error?.message || err.message || 'Failed to generate SQL. Please check your connection.';
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
