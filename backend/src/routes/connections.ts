@@ -122,9 +122,11 @@ router.post('/', async (req, res) => {
 // Test connection
 router.post('/test', async (req, res) => {
   try {
+    console.log('Received connection test request:', JSON.stringify(req.body, null, 2));
     const connectionData = req.body;
     const isValid = await connectionManager.testConnection(connectionData);
     
+    console.log('Connection test successful');
     res.json({
       success: true,
       data: { valid: isValid, message: 'Connection test successful' }

@@ -1,5 +1,158 @@
 [
   {
+    "query": "show me first 5 rows of the customers table",
+    "sql": "SELECT customer_id, name, email, phone, address, city, state, country, created_at, updated_at FROM customers ORDER BY customer_id ASC LIMIT 5;",
+    "explanation": "This query selects data from the customers table, then sorts the results, limiting the output to 5 rows to answer: \"show me first 5 rows of the customers table\"",
+    "confidence": 67,
+    "provider": "Google Gemini",
+    "resultCount": 5,
+    "id": "query_1762397085310_yom74nqpa",
+    "timestamp": "2025-11-06T02:44:45.310Z",
+    "favorite": false
+  },
+  {
+    "query": "show me first 5 rows of the customers table",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query selects data from the information_schema table, applies 1 filter to narrow down the results, then sorts the results to answer: \"show me first 5 rows of the customers table\"",
+    "confidence": 26,
+    "provider": "Rule-based Fallback",
+    "resultCount": 4,
+    "id": "query_1762396552112_cqh5nrfj3",
+    "timestamp": "2025-11-06T02:35:52.112Z",
+    "favorite": false
+  },
+  {
+    "query": "show me first 5 rows of the customers table",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query selects data from the information_schema table, applies 1 filter to narrow down the results, then sorts the results to answer: \"show me first 5 rows of the customers table\"",
+    "confidence": 26,
+    "provider": "Rule-based Fallback",
+    "resultCount": 4,
+    "id": "query_1762396519564_qhhtzkcvm",
+    "timestamp": "2025-11-06T02:35:19.564Z",
+    "favorite": false
+  },
+  {
+    "query": "show me first 5 rows of the customers table",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query selects data from the information_schema table, applies 1 filter to narrow down the results, then sorts the results to answer: \"show me first 5 rows of the customers table\"",
+    "confidence": 26,
+    "provider": "Rule-based Fallback",
+    "resultCount": 4,
+    "id": "query_1762396458736_r9f5xgab5",
+    "timestamp": "2025-11-06T02:34:18.736Z",
+    "favorite": false
+  },
+  {
+    "query": "show me first 5 rows of the customers table",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query selects data from the information_schema table, applies 1 filter to narrow down the results, then sorts the results to answer: \"show me first 5 rows of the customers table\"",
+    "confidence": 26,
+    "provider": "Rule-based Fallback",
+    "resultCount": 4,
+    "id": "query_1762396437596_88rkalbb5",
+    "timestamp": "2025-11-06T02:33:57.596Z",
+    "favorite": false
+  },
+  {
+    "query": "show me first 5 rows of the customers table",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query selects data from the information_schema table, applies 1 filter to narrow down the results, then sorts the results to answer: \"show me first 5 rows of the customers table\"",
+    "confidence": 26,
+    "provider": "Rule-based Fallback",
+    "resultCount": 4,
+    "id": "query_1762396138009_j3t0dwt10",
+    "timestamp": "2025-11-06T02:28:58.009Z",
+    "favorite": false
+  },
+  {
+    "query": "show me all the tables in the database",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query selects data from the information_schema table, applies 1 filter to narrow down the results, then sorts the results to answer: \"show me all the tables in the database\"",
+    "confidence": 26,
+    "provider": "Rule-based Fallback",
+    "resultCount": 4,
+    "id": "query_1762396017122_9i8db0xqs",
+    "timestamp": "2025-11-06T02:26:57.122Z",
+    "favorite": false
+  },
+  {
+    "query": "show me all users",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query filters the data based on specific conditions to find exactly what you're looking for.",
+    "confidence": 55,
+    "provider": "Rule-based Fallback",
+    "resultCount": 2,
+    "id": "query_1761790474159_wcyfeteos",
+    "timestamp": "2025-10-30T02:14:34.159Z",
+    "favorite": false
+  },
+  {
+    "query": "show me all tables",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query filters the data based on specific conditions to find exactly what you're looking for.",
+    "confidence": 55,
+    "provider": "Rule-based Fallback",
+    "resultCount": 2,
+    "id": "query_1761790464827_fer7hd9e1",
+    "timestamp": "2025-10-30T02:14:24.827Z",
+    "favorite": false
+  },
+  {
+    "query": "show me all users",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query filters the data based on specific conditions to find exactly what you're looking for.",
+    "confidence": 55,
+    "provider": "Rule-based Fallback",
+    "resultCount": 2,
+    "id": "query_1761790425375_9nmt8140a",
+    "timestamp": "2025-10-30T02:13:45.375Z",
+    "favorite": false
+  },
+  {
+    "query": "show me all tables",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query filters the data based on specific conditions to find exactly what you're looking for.",
+    "confidence": 55,
+    "provider": "Rule-based Fallback",
+    "resultCount": 2,
+    "id": "query_1761790419805_t714k0ghz",
+    "timestamp": "2025-10-30T02:13:39.805Z",
+    "favorite": false
+  },
+  {
+    "query": "show me all users",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query filters the data based on specific conditions to find exactly what you're looking for.",
+    "confidence": 55,
+    "provider": "Rule-based Fallback",
+    "resultCount": 2,
+    "id": "query_1761790403806_wumsdvq2a",
+    "timestamp": "2025-10-30T02:13:23.806Z",
+    "favorite": false
+  },
+  {
+    "query": "Show me all users",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query filters the data based on specific conditions to find exactly what you're looking for.",
+    "confidence": 55,
+    "provider": "Rule-based Fallback",
+    "resultCount": 2,
+    "id": "query_1761790369707_1u3ogvr8a",
+    "timestamp": "2025-10-30T02:12:49.707Z",
+    "favorite": false
+  },
+  {
+    "query": "Show me all users",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "explanation": "This query filters the data based on specific conditions to find exactly what you're looking for.",
+    "confidence": 55,
+    "provider": "Rule-based Fallback",
+    "id": "query_1761790360365_ldi98xuq8",
+    "timestamp": "2025-10-30T02:12:40.365Z",
+    "favorite": false
+  },
+  {
     "query": "show me top 5 customers by order amount",
     "sql": "SELECT customer_id, name, email, city FROM customers ORDER BY customer_id DESC LIMIT 5;",
     "explanation": "This query sorts results in descending order to show the highest values first, useful for finding top performers.",

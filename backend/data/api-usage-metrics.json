@@ -1,0 +1,14 @@
+[
+  {
+    "provider": "Rule-based Fallback",
+    "requestCount": 2,
+    "successCount": 2,
+    "errorCount": 0,
+    "totalLatency": 1,
+    "averageLatency": 0.5,
+    "costEstimate": 0,
+    "lastUsed": "2025-11-06T02:28:58.001Z",
+    "rateLimitHits": 0,
+    "timestamp": "2025-11-06T02:28:58.001Z"
+  }
+]

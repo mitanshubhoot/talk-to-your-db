@@ -1,0 +1,46 @@
+[
+  {
+    "id": "1762396437561-0aeb8thw6",
+    "provider": "Google Gemini",
+    "errorType": "not_found",
+    "errorMessage": "Google Gemini API error: 404",
+    "userQuery": "show me first 5 rows of the customers table",
+    "stackTrace": "Error: Google Gemini API error: 404\n    at FreeAIService.generateSqlWithGemini (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/freeAiService.ts:614:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async FreeAIService.generateSql (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/freeAiService.ts:1317:26)\n    at async EnhancedModelManager.generateWithFallback (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedModelManager.ts:262:24)\n    at async EnhancedModelManager.generateEnhancedSQL (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedModelManager.ts:102:18)\n    at async EnhancedIntegrationService.generateSql (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedIntegrationService.ts:107:34)\n    at async <anonymous> (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/routes/textToSql.ts:388:23)",
+    "timestamp": "2025-11-06T02:33:57.561Z",
+    "retryAttempt": 0,
+    "resolved": false
+  },
+  {
+    "id": "1762396458717-6y5po6qez",
+    "provider": "Google Gemini",
+    "errorType": "not_found",
+    "errorMessage": "Google Gemini API error: 404",
+    "userQuery": "show me first 5 rows of the customers table",
+    "stackTrace": "Error: Google Gemini API error: 404\n    at FreeAIService.generateSqlWithGemini (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/freeAiService.ts:614:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async FreeAIService.generateSql (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/freeAiService.ts:1317:26)\n    at async EnhancedModelManager.generateWithFallback (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedModelManager.ts:262:24)\n    at async EnhancedModelManager.generateEnhancedSQL (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedModelManager.ts:102:18)\n    at async EnhancedIntegrationService.generateSql (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedIntegrationService.ts:107:34)\n    at async <anonymous> (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/routes/textToSql.ts:388:23)",
+    "timestamp": "2025-11-06T02:34:18.717Z",
+    "retryAttempt": 0,
+    "resolved": false
+  },
+  {
+    "id": "1762396519541-3to4seg9b",
+    "provider": "Google Gemini",
+    "errorType": "not_found",
+    "errorMessage": "Google Gemini API error: 404",
+    "userQuery": "show me first 5 rows of the customers table",
+    "stackTrace": "Error: Google Gemini API error: 404\n    at FreeAIService.generateSqlWithGemini (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/freeAiService.ts:614:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async FreeAIService.generateSql (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/freeAiService.ts:1317:26)\n    at async EnhancedModelManager.generateWithFallback (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedModelManager.ts:262:24)\n    at async EnhancedModelManager.generateEnhancedSQL (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedModelManager.ts:102:18)\n    at async EnhancedIntegrationService.generateSql (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedIntegrationService.ts:107:34)\n    at async <anonymous> (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/routes/textToSql.ts:388:23)",
+    "timestamp": "2025-11-06T02:35:19.541Z",
+    "retryAttempt": 0,
+    "resolved": false
+  },
+  {
+    "id": "1762396552093-qu73ey82e",
+    "provider": "Google Gemini",
+    "errorType": "not_found",
+    "errorMessage": "Google Gemini API error: 404",
+    "userQuery": "show me first 5 rows of the customers table",
+    "stackTrace": "Error: Google Gemini API error: 404\n    at FreeAIService.generateSqlWithGemini (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/freeAiService.ts:614:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async FreeAIService.generateSql (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/freeAiService.ts:1317:26)\n    at async EnhancedModelManager.generateWithFallback (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedModelManager.ts:262:24)\n    at async EnhancedModelManager.generateEnhancedSQL (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedModelManager.ts:102:18)\n    at async EnhancedIntegrationService.generateSql (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/services/enhancedIntegrationService.ts:107:34)\n    at async <anonymous> (/Users/mitanshubhoot/Documents/Projects/talk-to-your-db/backend/src/routes/textToSql.ts:388:23)",
+    "timestamp": "2025-11-06T02:35:52.093Z",
+    "retryAttempt": 0,
+    "resolved": false
+  }
+]

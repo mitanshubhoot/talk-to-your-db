@@ -1,0 +1,66 @@
+{
+  "flags": {
+    "enhanced_sql_generation": {
+      "name": "enhanced_sql_generation",
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "description": "Use enhanced SQL generation with advanced models and validation",
+      "createdAt": "2025-10-30T03:15:11.659Z",
+      "updatedAt": "2025-10-30T03:15:11.659Z",
+      "conditions": {
+        "connectionTypes": [
+          "postgresql",
+          "mysql",
+          "sqlite"
+        ]
+      }
+    },
+    "dialect_aware_prompting": {
+      "name": "dialect_aware_prompting",
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "description": "Use database dialect-specific prompting for better SQL generation",
+      "createdAt": "2025-10-30T03:15:11.659Z",
+      "updatedAt": "2025-10-30T03:15:11.659Z"
+    },
+    "ensemble_generation": {
+      "name": "ensemble_generation",
+      "enabled": false,
+      "rolloutPercentage": 0,
+      "description": "Use ensemble approach with multiple models for complex queries",
+      "createdAt": "2025-10-30T03:15:11.659Z",
+      "updatedAt": "2025-10-30T03:15:11.659Z",
+      "conditions": {
+        "queryPatterns": [
+          "complex",
+          "analytical"
+        ]
+      }
+    },
+    "advanced_validation": {
+      "name": "advanced_validation",
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "description": "Use advanced SQL validation and confidence scoring",
+      "createdAt": "2025-10-30T03:15:11.659Z",
+      "updatedAt": "2025-10-30T03:15:11.659Z"
+    },
+    "query_optimization_suggestions": {
+      "name": "query_optimization_suggestions",
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "description": "Provide query optimization suggestions in responses",
+      "createdAt": "2025-10-30T03:15:11.659Z",
+      "updatedAt": "2025-10-30T03:15:11.659Z"
+    },
+    "production_monitoring": {
+      "name": "production_monitoring",
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "description": "Enable comprehensive production monitoring and logging",
+      "createdAt": "2025-10-30T03:15:11.659Z",
+      "updatedAt": "2025-10-30T03:15:11.659Z"
+    }
+  },
+  "lastUpdated": "2025-10-30T03:15:11.673Z"
+}

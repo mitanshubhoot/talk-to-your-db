@@ -3,6 +3,7 @@ import mysql from 'mysql2/promise';
 import fs from 'fs/promises';
 import path from 'path';
 import { DatabaseConnection, DatabaseConnectionConfig, SchemaComparison, SchemaDifference, DatabaseDialect } from '../types/database.js';
+import { Database } from 'sqlite3';
 
 // Optional sqlite imports
 let sqlite3: any;
@@ -269,8 +270,37 @@ export class ConnectionManager {
     const defaultConnection = connections.find(c => c.isDefault);
     
     if (defaultConnection) {
-      this.defaultConnectionId = defaultConnection.id;
-      return await this.getConnection(defaultConnection.id);
+      // Test the connection before returning it
+      try {
+        const isValid = await this.testConnection(defaultConnection);
+        if (isValid) {
+          this.defaultConnectionId = defaultConnection.id;
+          return await this.getConnection(defaultConnection.id);
+        } else {
+          // Connection test failed, log error without password
+          console.error('Default connection test failed:', {
+            id: defaultConnection.id,
+            name: defaultConnection.name,
+            type: defaultConnection.type,
+            host: defaultConnection.host,
+            port: defaultConnection.port,
+            database: defaultConnection.database
+          });
+          return null;
+        }
+      } catch (error) {
+        // Connection test threw an error, log without password
+        console.error('Default connection test error:', {
+          id: defaultConnection.id,
+          name: defaultConnection.name,
+          type: defaultConnection.type,
+          host: defaultConnection.host,
+          port: defaultConnection.port,
+          database: defaultConnection.database,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        return null;
+      }
     }
     
     return null;
@@ -548,8 +578,8 @@ export class ConnectionManager {
     return schema;
   }
 
-  private async discoverSQLiteSchema(pool: Database): Promise<any> {
-    const tables = await pool.all(`
+  private async discoverSQLiteSchema(pool: any): Promise<any> {
+    const tables: any[] = await pool.all(`
       SELECT name as table_name, type as table_type
       FROM sqlite_master 
       WHERE type='table' AND name NOT LIKE 'sqlite_%'
@@ -559,7 +589,7 @@ export class ConnectionManager {
     const schema: any = { tables: [], relationships: [] };
 
     for (const table of tables) {
-      const columns = await pool.all(`PRAGMA table_info(${table.table_name})`);
+      const columns: any[] = await pool.all(`PRAGMA table_info(${table.table_name})`);
       
       schema.tables.push({
         name: table.table_name,

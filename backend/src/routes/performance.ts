@@ -1,6 +1,7 @@
 import express from 'express';
 import { ConnectionManager } from '../services/connectionManager.js';
 import { QueryPerformanceService } from '../services/queryPerformance.js';
+import { enhancedModelManager } from '../services/enhancedModelManager';
 
 const router = express.Router();
 const connectionManager = new ConnectionManager();
@@ -229,6 +230,91 @@ router.get('/compare', async (req, res) => {
     res.status(500).json({
       success: false,
       error: { message: 'Failed to compare performance' }
+    });
+  }
+});
+
+// Get enhanced performance dashboard
+router.get('/dashboard', async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    let timeRange: { start: Date; end: Date } | undefined;
+    if (startDate && endDate) {
+      timeRange = {
+        start: new Date(startDate as string),
+        end: new Date(endDate as string)
+      };
+    }
+
+    const dashboard = await enhancedModelManager.getPerformanceDashboard(timeRange);
+
+    res.json({
+      success: true,
+      data: dashboard
+    });
+
+  } catch (error) {
+    console.error('Error getting performance dashboard:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: error instanceof Error ? error.message : 'Failed to get performance dashboard' }
+    });
+  }
+});
+
+// Get query optimization analysis
+router.post('/optimize', async (req, res) => {
+  try {
+    const { sql, schema } = req.body;
+
+    if (!sql || !schema) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'SQL query and schema are required' }
+      });
+    }
+
+    const optimization = await enhancedModelManager.getOptimizationSuggestions(sql, schema);
+
+    res.json({
+      success: true,
+      data: optimization
+    });
+
+  } catch (error) {
+    console.error('Error getting optimization suggestions:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: error instanceof Error ? error.message : 'Failed to get optimization suggestions' }
+    });
+  }
+});
+
+// Track query execution performance
+router.post('/track', async (req, res) => {
+  try {
+    const { queryId, executionTime, resultCount, success, errorMessage } = req.body;
+
+    if (!queryId || executionTime === undefined || resultCount === undefined || success === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Missing required fields: queryId, executionTime, resultCount, success' }
+      });
+    }
+
+    await enhancedModelManager.trackQueryExecution(queryId, executionTime, resultCount, success, errorMessage);
+
+    res.json({
+      success: true,
+      data: { message: 'Query execution tracked successfully' }
+    });
+
+  } catch (error) {
+    console.error('Error tracking query execution:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: error instanceof Error ? error.message : 'Failed to track query execution' }
     });
   }
 });

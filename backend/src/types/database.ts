@@ -1,5 +1,4 @@
-export interface DatabaseConnection {
-  id: string;
+export interface DatabaseConnectionConfig {
   name: string;
   type: 'postgresql' | 'mysql' | 'sqlite' | 'mssql' | 'oracle' | 'snowflake' | 'redshift' | 'bigquery' | 'mariadb' | 'mongodb' | 'clickhouse';
   host?: string;
@@ -25,6 +24,11 @@ export interface DatabaseConnection {
   authSource?: string;
   authMechanism?: string;
   
+  isDefault?: boolean;
+}
+
+export interface DatabaseConnection extends DatabaseConnectionConfig {
+  id: string;
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;

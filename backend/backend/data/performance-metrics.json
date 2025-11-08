@@ -1,0 +1,102 @@
+[
+  {
+    "modelId": "test-model",
+    "queryType": "simple",
+    "accuracy": 85,
+    "latency": 150,
+    "userSatisfaction": 4,
+    "errorRate": 0.1,
+    "timestamp": "2025-10-30T03:07:34.278Z",
+    "provider": "OpenAI"
+  },
+  {
+    "modelId": "Rule-based Fallback",
+    "queryType": "filtering",
+    "accuracy": 50,
+    "latency": 7,
+    "userSatisfaction": 0,
+    "errorRate": 1,
+    "timestamp": "2025-10-30T03:18:37.448Z",
+    "provider": "Other"
+  },
+  {
+    "modelId": "Rule-based Fallback",
+    "queryType": "aggregation",
+    "accuracy": 53,
+    "latency": 9,
+    "userSatisfaction": 0,
+    "errorRate": 1,
+    "timestamp": "2025-10-30T03:18:37.490Z",
+    "provider": "Other"
+  },
+  {
+    "modelId": "Rule-based Fallback",
+    "queryType": "filtering",
+    "accuracy": 26,
+    "latency": 52,
+    "userSatisfaction": 0,
+    "errorRate": 1,
+    "timestamp": "2025-11-06T02:26:57.058Z",
+    "provider": "Other"
+  },
+  {
+    "modelId": "Rule-based Fallback",
+    "queryType": "filtering",
+    "accuracy": 26,
+    "latency": 12,
+    "userSatisfaction": 0,
+    "errorRate": 1,
+    "timestamp": "2025-11-06T02:28:58.002Z",
+    "provider": "Other"
+  },
+  {
+    "modelId": "Rule-based Fallback",
+    "queryType": "filtering",
+    "accuracy": 26,
+    "latency": 245,
+    "userSatisfaction": 0,
+    "errorRate": 1,
+    "timestamp": "2025-11-06T02:33:57.573Z",
+    "provider": "Other"
+  },
+  {
+    "modelId": "Rule-based Fallback",
+    "queryType": "filtering",
+    "accuracy": 26,
+    "latency": 148,
+    "userSatisfaction": 0,
+    "errorRate": 1,
+    "timestamp": "2025-11-06T02:34:18.723Z",
+    "provider": "Other"
+  },
+  {
+    "modelId": "Rule-based Fallback",
+    "queryType": "filtering",
+    "accuracy": 26,
+    "latency": 193,
+    "userSatisfaction": 0,
+    "errorRate": 1,
+    "timestamp": "2025-11-06T02:35:19.547Z",
+    "provider": "Other"
+  },
+  {
+    "modelId": "Rule-based Fallback",
+    "queryType": "filtering",
+    "accuracy": 26,
+    "latency": 177,
+    "userSatisfaction": 0,
+    "errorRate": 1,
+    "timestamp": "2025-11-06T02:35:52.100Z",
+    "provider": "Other"
+  },
+  {
+    "modelId": "Google Gemini",
+    "queryType": "filtering",
+    "accuracy": 67,
+    "latency": 4002,
+    "userSatisfaction": 0,
+    "errorRate": 1,
+    "timestamp": "2025-11-06T02:44:45.288Z",
+    "provider": "Google"
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "service": "OpenAI",
+    "status": "unhealthy",
+    "responseTime": 0,
+    "lastCheck": "2025-11-06T02:43:00.406Z",
+    "errorMessage": "API key not configured"
+  },
+  {
+    "service": "Anthropic",
+    "status": "unhealthy",
+    "responseTime": 0,
+    "lastCheck": "2025-11-06T02:43:00.407Z",
+    "errorMessage": "API key not configured"
+  },
+  {
+    "service": "Google Gemini",
+    "status": "degraded",
+    "responseTime": 106,
+    "lastCheck": "2025-11-06T02:43:00.513Z",
+    "metadata": {
+      "statusCode": 403,
+      "statusText": "Forbidden"
+    },
+    "errorMessage": "HTTP 403: Forbidden"
+  },
+  {
+    "service": "Hugging Face",
+    "status": "unhealthy",
+    "responseTime": 0,
+    "lastCheck": "2025-11-06T02:43:00.513Z",
+    "errorMessage": "API key not configured"
+  },
+  {
+    "service": "Cohere",
+    "status": "unhealthy",
+    "responseTime": 0,
+    "lastCheck": "2025-11-06T02:43:00.513Z",
+    "errorMessage": "API key not configured"
+  }
+]

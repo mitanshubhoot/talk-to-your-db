@@ -43,6 +43,7 @@ import {
   Close,
   SwapHoriz,
   Info,
+  Refresh,
 } from '@mui/icons-material'
 import { textToSqlApi } from './services/api'
 import api from './services/api'
@@ -50,6 +51,8 @@ import { QueryHistory } from './components/QueryHistory'
 import { PerformanceDashboard } from './components/PerformanceDashboard'
 import { DatabaseSelector } from './components/DatabaseSelector'
 import { ResultsTable } from './components/ResultsTable'
+import { ChartRecommendationComponent } from './components/ChartRecommendation'
+import { DashboardGenerator } from './components/DashboardGenerator'
 
 const DRAWER_WIDTH = 280
 
@@ -62,6 +65,7 @@ interface QueryResult {
   rowCount?: number
   fields?: Array<{ name: string; dataTypeID: number }>
   provider?: string
+  visualization?: any
 }
 
 interface OptimizationSuggestion {
@@ -97,7 +101,7 @@ interface NavigationItem {
   children?: NavigationItem[]
 }
 
-type ViewType = 'main' | 'history' | 'databases' | 'performance' | 'settings' | 'templates'
+type ViewType = 'main' | 'history' | 'databases' | 'performance' | 'settings' | 'templates' | 'dashboards'
 
 function App() {
   const [result, setResult] = useState<QueryResult | null>(null)
@@ -111,6 +115,7 @@ function App() {
   const [profileEmail, setProfileEmail] = useState('')
   const [profileUpdateLoading, setProfileUpdateLoading] = useState(false)
   const [profileUpdateSuccess, setProfileUpdateSuccess] = useState(false)
+  const [connectionLoading, setConnectionLoading] = useState(false)
   
   // Optimization state
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null)
@@ -126,29 +131,33 @@ function App() {
   }, [])
 
   const loadCurrentDatabase = async () => {
+    setConnectionLoading(true)
     try {
       // Try to load current database info
       const response = await api.get('/connections/current')
       if (response.data.success && response.data.data) {
-        setCurrentDatabase(response.data.data)
+        // Backend has verified connection - safe to display as connected
+        setCurrentDatabase({
+          ...response.data.data,
+          isConnected: true,
+          lastConnected: new Date().toISOString()
+        })
         return
       }
-    } catch (error) {
-      console.log('No current database connection found')
+    } catch (error: any) {
+      // 404 or connection test failed - this is expected behavior
+      // Log to console for debugging but don't show error to user
+      if (error.response?.status === 404) {
+        console.log('No valid database connection found')
+      } else {
+        console.log('Failed to load database connection:', error.message || error)
+      }
+    } finally {
+      setConnectionLoading(false)
     }
     
-    // For demo purposes, let's set a mock connection if we detect connectivity  
-    // This happens when the backend is connected but no explicit database connection exists
-    setCurrentDatabase({
-      id: 'demo-postgres',
-      name: 'PostgreSQL Demo',
-      type: 'postgresql',
-      database: 'textosql_dev',
-      host: 'localhost',
-      port: 5432,
-      isConnected: true,
-      lastConnected: new Date().toISOString(),
-    })
+    // No valid connection - show disconnected state
+    setCurrentDatabase(null)
   }
 
   const handleNavToggle = (itemId: string) => {
@@ -247,6 +256,10 @@ function App() {
     setCurrentView('main')
   }
 
+  const refreshConnection = async () => {
+    await loadCurrentDatabase()
+  }
+
   const handleProfileUpdate = async () => {
     setProfileUpdateLoading(true)
     setProfileUpdateSuccess(false)
@@ -280,6 +293,7 @@ function App() {
       children: [
         { id: 'templates', label: 'Templates', icon: <History /> },
         { id: 'history', label: 'History', icon: <History /> },
+        { id: 'dashboards', label: 'Dashboards', icon: <AutoAwesome /> },
       ],
     },
     {
@@ -348,6 +362,17 @@ function App() {
   }
 
   const renderDatabaseStatus = () => {
+    if (connectionLoading) {
+      return (
+        <Paper sx={{ p: 3, mb: 4, border: '1px solid #374151' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <CircularProgress size={20} />
+            <Typography variant="body1">Loading database connection...</Typography>
+          </Box>
+        </Paper>
+      )
+    }
+
     if (!currentDatabase) {
       return (
         <Paper sx={{ p: 3, mb: 4, border: '1px solid #374151' }}>
@@ -405,6 +430,11 @@ function App() {
             <Tooltip title="Database Details">
               <IconButton size="small" onClick={() => setCurrentView('databases')}>
                 <Info fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Refresh Connection">
+              <IconButton size="small" onClick={refreshConnection} disabled={connectionLoading}>
+                {connectionLoading ? <CircularProgress size={16} /> : <Refresh fontSize="small" />}
               </IconButton>
             </Tooltip>
             <Tooltip title="Switch Database">
@@ -572,6 +602,18 @@ function App() {
                 Results ({result.rowCount} rows)
               </Typography>
               <ResultsTable result={result} />
+              
+              {/* Visualization Recommendations */}
+              {result.visualization && (
+                <ChartRecommendationComponent 
+                  recommendation={result.visualization}
+                  onChartSelect={(chartType, config) => {
+                    console.log('Selected chart:', chartType, config);
+                    // Here you could implement chart rendering logic
+                    alert(`Chart type "${chartType}" selected! In a full implementation, this would render the chart.`);
+                  }}
+                />
+              )}
             </Box>
           )}
         </Paper>
@@ -756,20 +798,11 @@ function App() {
              case 'databases':
          return (
            <DatabaseSelector
-                            onConnectionCreated={(connectionId) => {
-                 // Set a mock database connection for demo
-                 setCurrentDatabase({
-                   id: connectionId,
-                   name: 'New Database Connection',
-                   type: 'postgresql',
-                   database: 'your_database',
-                   host: 'localhost',
-                   port: 5432,
-                   isConnected: true,
-                   lastConnected: new Date().toISOString(),
-                 })
-                 setCurrentView('main')
-               }}
+             onConnectionCreated={async (connectionId) => {
+               // Reload the current database connection
+               await loadCurrentDatabase()
+               setCurrentView('main')
+             }}
            />
          )
        case 'performance':
@@ -864,6 +897,22 @@ function App() {
             </Grid>
           </Box>
         )
+      case 'dashboards':
+        return (
+          <Box sx={{ maxWidth: 1000, mx: 'auto', p: 4 }}>
+            <Typography variant="h4" sx={{ mb: 2 }}>Dashboard Generator</Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+              Create interactive dashboards from natural language descriptions. 
+              Describe what you want to see and we'll generate the appropriate widgets and queries.
+            </Typography>
+            <DashboardGenerator 
+              connectionId={currentDatabase?.id}
+              onDashboardGenerated={(dashboard) => {
+                console.log('Dashboard generated:', dashboard);
+              }}
+            />
+          </Box>
+        )
       default:
         return renderMainView()
     }
@@ -930,7 +979,20 @@ function App() {
 
         {/* Bottom Section - Database Status */}
         <Box sx={{ p: 3, borderTop: '1px solid #374151' }}>
-          {currentDatabase ? (
+          {connectionLoading ? (
+            <Paper sx={{ 
+              p: 2, 
+              background: 'linear-gradient(135deg, #1A1A1A 0%, #374151 100%)',
+              border: '1px solid #4B5563'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <CircularProgress size={16} />
+                <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                  Loading...
+                </Typography>
+              </Box>
+            </Paper>
+          ) : currentDatabase ? (
             <Paper sx={{ 
               p: 2, 
               background: 'linear-gradient(135deg, #1A1A1A 0%, #374151 100%)',

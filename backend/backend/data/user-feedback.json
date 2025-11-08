@@ -1,0 +1,13 @@
+[
+  {
+    "queryId": "test-query-123",
+    "originalQuery": "show me all users",
+    "generatedSql": "SELECT * FROM users;",
+    "userRating": 4,
+    "feedbackType": "rating",
+    "modelUsed": "OpenAI GPT-4",
+    "confidence": 85,
+    "id": "6b332ffa-5dde-4c48-997a-c9c51907f5b9",
+    "timestamp": "2025-10-30T03:07:34.304Z"
+  }
+]

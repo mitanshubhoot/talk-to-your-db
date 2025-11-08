@@ -220,6 +220,24 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
     setActiveStep(prev => prev - 1)
   }
 
+  const isFormValid = () => {
+    if (!connectionForm.name || !selectedType) return false
+    
+    switch (selectedType) {
+      case 'sqlite':
+        return !!connectionForm.filepath
+      case 'snowflake':
+        return !!(connectionForm.account && connectionForm.warehouse && connectionForm.database && connectionForm.username && connectionForm.password)
+      case 'bigquery':
+        return !!connectionForm.project
+      case 'mongodb':
+        return !!(connectionForm.host && connectionForm.database)
+      default:
+        // Standard SQL databases
+        return !!(connectionForm.host && connectionForm.database && connectionForm.username)
+    }
+  }
+
   const handleConnect = async () => {
     setIsConnecting(true)
     setError(null)
@@ -235,7 +253,7 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
         username: connectionForm.username,
         password: connectionForm.password,
         ssl: connectionForm.ssl,
-        isDefault: false,
+        isDefault: true, // Set as default connection
         
         // Cloud-specific fields
         account: connectionForm.account,
@@ -254,37 +272,55 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
         authMechanism: connectionForm.authMechanism
       }
 
-      // Test the connection first
-      const testResponse = await fetch('/api/connections/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(connectionData)
-      })
+      // Use the API service for better error handling
+      const api = (await import('../services/api')).default
       
-      const testData = await testResponse.json()
-      if (!testData.success) {
-        throw new Error(testData.error?.message || 'Connection test failed')
+      // Test the connection first
+      console.log('Testing connection with data:', connectionData)
+      const testResponse = await api.post('/connections/test', connectionData)
+      
+      if (!testResponse.data.success) {
+        throw new Error(testResponse.data.error?.message || 'Connection test failed')
       }
 
-      // If test passes, create the connection
-      const createResponse = await fetch('/api/connections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(connectionData)
-      })
+      console.log('Connection test successful, creating connection...')
       
-      const createData = await createResponse.json()
-      if (!createData.success) {
-        throw new Error(createData.error?.message || 'Failed to create connection')
+      // If test passes, create the connection
+      const createResponse = await api.post('/connections', connectionData)
+      
+      if (!createResponse.data.success) {
+        throw new Error(createResponse.data.error?.message || 'Failed to create connection')
       }
+      
+      console.log('Connection created successfully:', createResponse.data.data)
       
       // Show success step
       setActiveStep(2)
       if (onConnectionCreated) {
-        onConnectionCreated(createData.data.id)
+        onConnectionCreated(createResponse.data.data.id)
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to connect to database')
+      console.error('Connection error:', err)
+      let errorMessage = 'Failed to connect to database'
+      
+      if (err.response?.data?.error?.message) {
+        errorMessage = err.response.data.error.message
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      
+      // Provide more specific error messages based on common issues
+      if (errorMessage.includes('ECONNREFUSED')) {
+        errorMessage = 'Connection refused. Please check if the database server is running and accessible.'
+      } else if (errorMessage.includes('authentication failed')) {
+        errorMessage = 'Authentication failed. Please check your username and password.'
+      } else if (errorMessage.includes('database') && errorMessage.includes('does not exist')) {
+        errorMessage = 'Database does not exist. Please check the database name.'
+      } else if (errorMessage.includes('timeout')) {
+        errorMessage = 'Connection timeout. Please check your network connection and database server.'
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsConnecting(false)
     }
@@ -672,7 +708,7 @@ export const DatabaseSelector: React.FC<DatabaseSelectorProps> = ({
             <Button
               variant="contained"
               onClick={handleConnect}
-              disabled={isConnecting || !connectionForm.name || !connectionForm.database}
+              disabled={isConnecting || !isFormValid()}
               sx={{ px: 4 }}
             >
               {isConnecting ? 'Connecting...' : 'Test & Connect'}

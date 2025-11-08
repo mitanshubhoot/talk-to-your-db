@@ -10,6 +10,38 @@ const logger = createLogger({
 
 const router = Router();
 
+// GET /api/database/status
+// Get database connection status
+router.get('/status', async (req: Request, res: Response) => {
+  try {
+    logger.info('Checking database connection status');
+
+    const status = databaseService.getConnectionStatus();
+
+    res.json({
+      success: true,
+      data: {
+        status: status.initialized && status.hasPool ? 'connected' : 'disconnected',
+        initialized: status.initialized,
+        hasPool: status.hasPool,
+        error: status.error,
+        poolStats: status.poolStats
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error checking database status:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: {
+        message: error instanceof Error ? error.message : 'Failed to check database status',
+        type: 'status_error'
+      }
+    });
+  }
+});
+
 // GET /api/database/schema
 // Get database schema information
 router.get('/schema', async (req: Request, res: Response) => {
@@ -39,8 +71,15 @@ router.get('/schema', async (req: Request, res: Response) => {
     logger.error('Error fetching database schema:', error);
     
     res.status(500).json({
+      success: false,
       error: {
-        message: error instanceof Error ? error.message : 'Failed to fetch database schema'
+        message: error instanceof Error ? error.message : 'Failed to fetch database schema',
+        type: 'schema_error',
+        suggestions: [
+          'Ensure database connection is working',
+          'Check if database contains tables',
+          'Verify user has permission to access schema information'
+        ]
       }
     });
   }
@@ -52,22 +91,26 @@ router.get('/test-connection', async (req: Request, res: Response) => {
   try {
     logger.info('Testing database connection');
 
-    const isConnected = await databaseService.testConnection();
+    const connectionResult = await databaseService.testConnection();
 
-    if (isConnected) {
+    if (connectionResult.success) {
       logger.info('Database connection test successful');
       res.json({
         success: true,
         data: {
           connected: true,
-          message: 'Database connection successful'
+          message: 'Database connection successful',
+          details: connectionResult.details
         }
       });
     } else {
-      logger.warn('Database connection test failed');
+      logger.warn('Database connection test failed:', connectionResult.error);
       res.status(500).json({
+        success: false,
         error: {
-          message: 'Database connection test failed'
+          message: connectionResult.error || 'Database connection test failed',
+          details: connectionResult.details,
+          suggestions: connectionResult.details?.suggestions || []
         }
       });
     }
@@ -76,8 +119,10 @@ router.get('/test-connection', async (req: Request, res: Response) => {
     logger.error('Error testing database connection:', error);
     
     res.status(500).json({
+      success: false,
       error: {
-        message: error instanceof Error ? error.message : 'Failed to test database connection'
+        message: error instanceof Error ? error.message : 'Failed to test database connection',
+        type: 'connection_error'
       }
     });
   }
@@ -116,8 +161,47 @@ router.get('/tables', async (req: Request, res: Response) => {
     logger.error('Error fetching table list:', error);
     
     res.status(500).json({
+      success: false,
       error: {
-        message: error instanceof Error ? error.message : 'Failed to fetch table list'
+        message: error instanceof Error ? error.message : 'Failed to fetch table list',
+        type: 'tables_error',
+        suggestions: [
+          'Ensure database connection is working',
+          'Check if database contains tables',
+          'Verify user has permission to access table information'
+        ]
+      }
+    });
+  }
+});
+
+// POST /api/database/reinitialize
+// Reinitialize database connection
+router.post('/reinitialize', async (req: Request, res: Response) => {
+  try {
+    logger.info('Reinitializing database connection');
+
+    await databaseService.reinitialize();
+
+    // Test the new connection
+    const connectionResult = await databaseService.testConnection();
+
+    res.json({
+      success: true,
+      data: {
+        message: 'Database connection reinitialized',
+        connectionTest: connectionResult
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error reinitializing database connection:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: {
+        message: error instanceof Error ? error.message : 'Failed to reinitialize database connection',
+        type: 'reinitialize_error'
       }
     });
   }

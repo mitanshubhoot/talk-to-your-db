@@ -1,0 +1,229 @@
+[
+  {
+    "apiName": "Hugging Face",
+    "model": "defog/sqlcoder-7b-2",
+    "accuracy": 66.66666666666666,
+    "averageLatency": 0.036340166666661844,
+    "costPerQuery": 0.001,
+    "rateLimit": "1000 requests/hour (free tier)",
+    "reliability": 100,
+    "testResults": [
+      {
+        "naturalLanguage": "show me all users",
+        "expectedSQL": "SELECT * FROM users",
+        "generatedSQL": "SELECT * FROM users",
+        "isCorrect": true,
+        "confidence": 0.8,
+        "latency": 0.059499999999985675
+      },
+      {
+        "naturalLanguage": "how many users are there",
+        "expectedSQL": "SELECT COUNT(*) FROM users",
+        "generatedSQL": "SELECT COUNT(*) FROM users",
+        "isCorrect": true,
+        "confidence": 0.8,
+        "latency": 0.013874999999984539
+      },
+      {
+        "naturalLanguage": "users created last month",
+        "expectedSQL": "SELECT * FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)",
+        "generatedSQL": "SELECT * FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)",
+        "isCorrect": true,
+        "confidence": 0.8,
+        "latency": 0.019708000000008496
+      },
+      {
+        "naturalLanguage": "posts with their authors",
+        "expectedSQL": "SELECT p.*, u.name as author_name FROM posts p JOIN users u ON p.user_id = u.id",
+        "generatedSQL": "SELECT p.*, u.name FROM posts p JOIN users u ON p.user_id = u.id",
+        "isCorrect": false,
+        "confidence": 0.8,
+        "latency": 0.09241700000001174
+      },
+      {
+        "naturalLanguage": "average salary by department",
+        "expectedSQL": "SELECT department, AVG(salary) FROM employees GROUP BY department",
+        "generatedSQL": "SELECT department, AVG(salary) FROM employees GROUP BY department",
+        "isCorrect": true,
+        "confidence": 0.8,
+        "latency": 0.0191250000000025
+      },
+      {
+        "naturalLanguage": "top 5 customers by total order value",
+        "expectedSQL": "SELECT c.name, SUM(o.total) as total_value FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.id, c.name ORDER BY total_value DESC LIMIT 5",
+        "generatedSQL": "SELECT c.name, SUM(o.total) FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.id ORDER BY SUM(o.total) DESC LIMIT 5",
+        "isCorrect": false,
+        "confidence": 0.8,
+        "latency": 0.013415999999978112
+      }
+    ],
+    "errors": [],
+    "recommendations": [
+      "Moderate accuracy - needs improvement",
+      "Fast response times - good user experience",
+      "High reliability - no errors during testing"
+    ]
+  },
+  {
+    "apiName": "Hugging Face",
+    "model": "Salesforce/codet5p-770m",
+    "accuracy": 66.66666666666666,
+    "averageLatency": 0.03163866666666593,
+    "costPerQuery": 0.001,
+    "rateLimit": "1000 requests/hour (free tier)",
+    "reliability": 100,
+    "testResults": [
+      {
+        "naturalLanguage": "show me all users",
+        "expectedSQL": "SELECT * FROM users",
+        "generatedSQL": "SELECT * FROM users",
+        "isCorrect": true,
+        "confidence": 0.8,
+        "latency": 0.013125000000002274
+      },
+      {
+        "naturalLanguage": "how many users are there",
+        "expectedSQL": "SELECT COUNT(*) FROM users",
+        "generatedSQL": "SELECT COUNT(*) FROM users",
+        "isCorrect": true,
+        "confidence": 0.8,
+        "latency": 0.01495799999997871
+      },
+      {
+        "naturalLanguage": "users created last month",
+        "expectedSQL": "SELECT * FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)",
+        "generatedSQL": "SELECT * FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)",
+        "isCorrect": true,
+        "confidence": 0.8,
+        "latency": 0.01258300000000645
+      },
+      {
+        "naturalLanguage": "posts with their authors",
+        "expectedSQL": "SELECT p.*, u.name as author_name FROM posts p JOIN users u ON p.user_id = u.id",
+        "generatedSQL": "SELECT p.*, u.name FROM posts p JOIN users u ON p.user_id = u.id",
+        "isCorrect": false,
+        "confidence": 0.8,
+        "latency": 0.05570800000000986
+      },
+      {
+        "naturalLanguage": "average salary by department",
+        "expectedSQL": "SELECT department, AVG(salary) FROM employees GROUP BY department",
+        "generatedSQL": "SELECT department, AVG(salary) FROM employees GROUP BY department",
+        "isCorrect": true,
+        "confidence": 0.8,
+        "latency": 0.020624999999995453
+      },
+      {
+        "naturalLanguage": "top 5 customers by total order value",
+        "expectedSQL": "SELECT c.name, SUM(o.total) as total_value FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.id, c.name ORDER BY total_value DESC LIMIT 5",
+        "generatedSQL": "SELECT c.name, SUM(o.total) FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.id ORDER BY SUM(o.total) DESC LIMIT 5",
+        "isCorrect": false,
+        "confidence": 0.8,
+        "latency": 0.07283300000000281
+      }
+    ],
+    "errors": [],
+    "recommendations": [
+      "Moderate accuracy - needs improvement",
+      "Fast response times - good user experience",
+      "High reliability - no errors during testing"
+    ]
+  },
+  {
+    "apiName": "OpenAI GPT-3.5-turbo",
+    "model": "gpt-3.5-turbo",
+    "accuracy": 83.33333333333334,
+    "averageLatency": 0.027326166666673164,
+    "costPerQuery": 0.002,
+    "rateLimit": "3500 requests/minute",
+    "reliability": 100,
+    "testResults": [
+      {
+        "naturalLanguage": "show me all users",
+        "expectedSQL": "SELECT * FROM users",
+        "generatedSQL": "SELECT * FROM users",
+        "isCorrect": true,
+        "confidence": 0.9,
+        "latency": 0.052333000000004404
+      },
+      {
+        "naturalLanguage": "how many users are there",
+        "expectedSQL": "SELECT COUNT(*) FROM users",
+        "generatedSQL": "SELECT COUNT(*) FROM users",
+        "isCorrect": true,
+        "confidence": 0.9,
+        "latency": 0.06633299999998599
+      },
+      {
+        "naturalLanguage": "users created last month",
+        "expectedSQL": "SELECT * FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)",
+        "generatedSQL": "SELECT * FROM users WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)",
+        "isCorrect": true,
+        "confidence": 0.9,
+        "latency": 0.01691700000000651
+      },
+      {
+        "naturalLanguage": "posts with their authors",
+        "expectedSQL": "SELECT p.*, u.name as author_name FROM posts p JOIN users u ON p.user_id = u.id",
+        "generatedSQL": "SELECT p.*, u.name as author_name FROM posts p JOIN users u ON p.user_id = u.id",
+        "isCorrect": true,
+        "confidence": 0.9,
+        "latency": 0.010041000000001077
+      },
+      {
+        "naturalLanguage": "average salary by department",
+        "expectedSQL": "SELECT department, AVG(salary) FROM employees GROUP BY department",
+        "generatedSQL": "SELECT department, AVG(salary) as avg_salary FROM employees GROUP BY department",
+        "isCorrect": false,
+        "confidence": 0.9,
+        "latency": 0.009750000000025238
+      },
+      {
+        "naturalLanguage": "top 5 customers by total order value",
+        "expectedSQL": "SELECT c.name, SUM(o.total) as total_value FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.id, c.name ORDER BY total_value DESC LIMIT 5",
+        "generatedSQL": "SELECT c.name, SUM(o.total) as total_value FROM customers c JOIN orders o ON c.id = o.customer_id GROUP BY c.id, c.name ORDER BY total_value DESC LIMIT 5",
+        "isCorrect": true,
+        "confidence": 0.9,
+        "latency": 0.008583000000015772
+      }
+    ],
+    "errors": [],
+    "recommendations": [
+      "Good accuracy - suitable with human review",
+      "Fast response times - good user experience",
+      "High reliability - no errors during testing"
+    ]
+  },
+  {
+    "apiName": "Anthropic Claude",
+    "model": "claude-3-haiku",
+    "accuracy": 0,
+    "averageLatency": 0,
+    "costPerQuery": 0.00025,
+    "rateLimit": "1000 requests/minute",
+    "reliability": 0,
+    "testResults": [],
+    "errors": [
+      "API key required for testing"
+    ],
+    "recommendations": [
+      "Requires API key setup for evaluation"
+    ]
+  },
+  {
+    "apiName": "Google Gemini",
+    "model": "gemini-pro",
+    "accuracy": 0,
+    "averageLatency": 0,
+    "costPerQuery": 0.0005,
+    "rateLimit": "60 requests/minute (free tier)",
+    "reliability": 0,
+    "testResults": [],
+    "errors": [
+      "API key required for testing"
+    ],
+    "recommendations": [
+      "Requires API key setup for evaluation"
+    ]
+  }
+]

@@ -1,0 +1,109 @@
+[
+  {
+    "queryId": "f1ddf5c0-8417-44c1-aff3-213beecb3286",
+    "userQuery": "show me all customers",
+    "generatedSql": "SELECT customer_id, name, email, city, country FROM customers ORDER BY name LIMIT 20;",
+    "executionTime": 7,
+    "resultCount": 0,
+    "success": false,
+    "errorMessage": "",
+    "confidence": 50,
+    "modelUsed": "Rule-based Fallback",
+    "timestamp": "2025-10-30T03:18:37.475Z"
+  },
+  {
+    "queryId": "b1cfc9b9-3e8d-4209-941d-7b6548e36e94",
+    "userQuery": "count all customers",
+    "generatedSql": "SELECT COUNT(*) as customer_count FROM customers;",
+    "executionTime": 9,
+    "resultCount": 0,
+    "success": false,
+    "errorMessage": "",
+    "confidence": 53,
+    "modelUsed": "Rule-based Fallback",
+    "timestamp": "2025-10-30T03:18:37.499Z"
+  },
+  {
+    "queryId": "9a30ffc8-22be-448c-ba8b-aac9111a341d",
+    "userQuery": "show me all the tables in the database",
+    "generatedSql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "executionTime": 52,
+    "resultCount": 0,
+    "success": false,
+    "errorMessage": "",
+    "confidence": 26,
+    "modelUsed": "Rule-based Fallback",
+    "timestamp": "2025-11-06T02:26:57.109Z"
+  },
+  {
+    "queryId": "8a547205-28b6-4ddd-a958-5fe5737902c6",
+    "userQuery": "show me first 5 rows of the customers table",
+    "generatedSql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "executionTime": 12,
+    "resultCount": 0,
+    "success": false,
+    "errorMessage": "",
+    "confidence": 26,
+    "modelUsed": "Rule-based Fallback",
+    "timestamp": "2025-11-06T02:28:58.003Z"
+  },
+  {
+    "queryId": "7200eee4-ab51-4bde-9ee2-92055ac461fb",
+    "userQuery": "show me first 5 rows of the customers table",
+    "generatedSql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "executionTime": 245,
+    "resultCount": 0,
+    "success": false,
+    "errorMessage": "",
+    "confidence": 26,
+    "modelUsed": "Rule-based Fallback",
+    "timestamp": "2025-11-06T02:33:57.576Z"
+  },
+  {
+    "queryId": "c95e6969-d0f5-4e3a-ac95-5bb0bb645d25",
+    "userQuery": "show me first 5 rows of the customers table",
+    "generatedSql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "executionTime": 148,
+    "resultCount": 0,
+    "success": false,
+    "errorMessage": "",
+    "confidence": 26,
+    "modelUsed": "Rule-based Fallback",
+    "timestamp": "2025-11-06T02:34:18.725Z"
+  },
+  {
+    "queryId": "5efcf6be-7e9d-4b6d-be1e-03066f0e3970",
+    "userQuery": "show me first 5 rows of the customers table",
+    "generatedSql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "executionTime": 193,
+    "resultCount": 0,
+    "success": false,
+    "errorMessage": "",
+    "confidence": 26,
+    "modelUsed": "Rule-based Fallback",
+    "timestamp": "2025-11-06T02:35:19.549Z"
+  },
+  {
+    "queryId": "71c41c0b-39a7-41eb-8747-cb58f1166036",
+    "userQuery": "show me first 5 rows of the customers table",
+    "generatedSql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+    "executionTime": 177,
+    "resultCount": 0,
+    "success": false,
+    "errorMessage": "",
+    "confidence": 26,
+    "modelUsed": "Rule-based Fallback",
+    "timestamp": "2025-11-06T02:35:52.101Z"
+  },
+  {
+    "queryId": "0be62041-b637-4e6e-a727-983aaa5db108",
+    "userQuery": "show me first 5 rows of the customers table",
+    "generatedSql": "SELECT customer_id, name, email, phone, address, city, state, country, created_at, updated_at FROM customers ORDER BY customer_id ASC LIMIT 5;",
+    "executionTime": 4002,
+    "resultCount": 0,
+    "success": true,
+    "confidence": 67,
+    "modelUsed": "Google Gemini",
+    "timestamp": "2025-11-06T02:44:45.292Z"
+  }
+]
