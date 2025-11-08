@@ -482,27 +482,33 @@ function App() {
       {/* Database Status */}
       {renderDatabaseStatus()}
 
-      {/* Query Input */}
-      {currentDatabase && (
-        <Paper sx={{ p: 4, mb: 4, border: '1px solid #374151' }}>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            placeholder="Show me the top 5 products by revenue"
-            value={userQuery}
-            onChange={(e) => setUserQuery(e.target.value)}
-            onKeyDown={handleKeyPress}
-            variant="outlined"
-            sx={{ mb: 3 }}
-          />
-          
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+      {/* Query Input - Always show to make it feel like an AI agent */}
+      <Paper sx={{ p: 4, mb: 4, border: '1px solid #374151' }}>
+        <TextField
+          fullWidth
+          multiline
+          rows={4}
+          placeholder={currentDatabase ? "Show me the top 5 products by revenue" : "Ask me anything about databases or SQL..."}
+          value={userQuery}
+          onChange={(e) => setUserQuery(e.target.value)}
+          onKeyDown={handleKeyPress}
+          variant="outlined"
+          sx={{ mb: 3 }}
+          disabled={!currentDatabase}
+        />
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {!currentDatabase && (
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+              Connect a database to start querying your data
+            </Typography>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', flex: 1 }}>
             <Button
               variant="contained"
               size="large"
               onClick={handleGenerateSQL}
-              disabled={loading || !userQuery.trim()}
+              disabled={loading || !userQuery.trim() || !currentDatabase}
               startIcon={loading ? <CircularProgress size={20} /> : <PlayArrow />}
               sx={{
                 px: 4,
@@ -514,47 +520,46 @@ function App() {
               {loading ? 'Generating...' : 'Send'}
             </Button>
           </Box>
-        </Paper>
-      )}
-
-      {/* Action Buttons */}
-      {currentDatabase && (
-        <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
-          <Button
-            variant="outlined"
-            startIcon={<AutoAwesome />}
-            onClick={handleGenerateSQL}
-            disabled={loading || !userQuery.trim()}
-            sx={{ borderColor: '#374151', color: 'text.primary' }}
-          >
-            Generate SQL
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={optimizationLoading ? <CircularProgress size={16} /> : <TuneRounded />}
-            onClick={handleOptimizeSQL}
-            disabled={optimizationLoading || !result?.sql}
-            sx={{ borderColor: '#374151', color: 'text.primary' }}
-          >
-            {optimizationLoading ? 'Optimizing...' : 'Optimize SQL'}
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<HelpOutline />}
-            sx={{ borderColor: '#374151', color: 'text.primary' }}
-          >
-            Explain SQL
-          </Button>
-          <Button
-            variant="text"
-            endIcon={<PlayArrow />}
-            onClick={() => setCurrentView('templates')}
-            sx={{ color: 'primary.main' }}
-          >
-            More Templates
-          </Button>
         </Box>
-      )}
+      </Paper>
+
+      {/* Action Buttons - Always show to make it feel like an AI agent */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+        <Button
+          variant="outlined"
+          startIcon={<AutoAwesome />}
+          onClick={handleGenerateSQL}
+          disabled={loading || !userQuery.trim() || !currentDatabase}
+          sx={{ borderColor: '#374151', color: 'text.primary' }}
+        >
+          Generate SQL
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={optimizationLoading ? <CircularProgress size={16} /> : <TuneRounded />}
+          onClick={handleOptimizeSQL}
+          disabled={optimizationLoading || !result?.sql || !currentDatabase}
+          sx={{ borderColor: '#374151', color: 'text.primary' }}
+        >
+          {optimizationLoading ? 'Optimizing...' : 'Optimize SQL'}
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<HelpOutline />}
+          disabled={!currentDatabase}
+          sx={{ borderColor: '#374151', color: 'text.primary' }}
+        >
+          Explain SQL
+        </Button>
+        <Button
+          variant="text"
+          endIcon={<PlayArrow />}
+          onClick={() => setCurrentView('templates')}
+          sx={{ color: 'primary.main' }}
+        >
+          More Templates
+        </Button>
+      </Box>
 
       {/* Error Display */}
       {error && (
