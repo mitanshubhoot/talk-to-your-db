@@ -118,8 +118,8 @@ INSERT INTO products (name, category, price, stock_quantity, description) VALUES
 ('Food Storage Containers', 'Home & Kitchen', 39.99, 110, '24-piece glass food storage set with locking lids'),
 
 -- Clothing
-('Men\'s Cotton T-Shirt', 'Clothing', 19.99, 150, 'Comfortable crew neck t-shirt in various colors'),
-('Women\'s Yoga Pants', 'Clothing', 34.99, 120, 'High-waist athletic leggings with pockets'),
+('Men''s Cotton T-Shirt', 'Clothing', 19.99, 150, 'Comfortable crew neck t-shirt in various colors'),
+('Women''s Yoga Pants', 'Clothing', 34.99, 120, 'High-waist athletic leggings with pockets'),
 ('Denim Jeans Classic Fit', 'Clothing', 59.99, 85, 'Classic fit jeans in dark wash denim'),
 ('Hoodie Pullover', 'Clothing', 44.99, 95, 'Soft fleece hoodie with kangaroo pocket'),
 ('Running Shoes', 'Clothing', 89.99, 67, 'Lightweight running shoes with cushioned sole'),
